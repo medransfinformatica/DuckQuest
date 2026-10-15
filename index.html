@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DuckQuest — Aprende idiomas por niveles MCER (A1–C2)</title>
+<meta name="description" content="DuckQuest: plataforma interactiva para aprender idiomas por niveles MCER (A1-C2). Pronunciación, XP, racha y progreso local.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  html, body { -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #020617; }
+  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform:none;} }
+  .animate-fadeUp { animation: fadeUp .3s ease both; }
+  @keyframes pop { 0%{transform:scale(.94);opacity:0} 60%{transform:scale(1.02)} 100%{transform:scale(1);opacity:1} }
+  .animate-pop { animation: pop .25s ease both; }
+  @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(99,102,241,.5)} 100%{box-shadow:0 0 0 18px rgba(99,102,241,0)} }
+  .pulse-ring { animation: pulseRing 1.4s ease-out infinite; }
+  @keyframes toastIn { from { opacity:0; transform: translateY(12px) scale(.97);} to {opacity:1; transform:none;} }
+  .animate-toast { animation: toastIn .25s ease both; }
+  .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,.15) 1px, transparent 0); background-size: 22px 22px; }
+  .cjk { font-family: 'Noto Sans CJK JP','Noto Sans SC','Noto Sans KR','Malgun Gothic','Microsoft YaHei','Yu Gothic',Inter,sans-serif; }
+</style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased">
+  <div id="app" class="min-h-full"></div>
+  <div id="toast" class="fixed z-50 left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 hidden"></div>
+
+<script>
+/* ============================================================
+   DuckQuest — Plataforma de idiomas por niveles MCER (A1–C2)
+   Standalone: HTML5 + Tailwind CDN + FontAwesome CDN + Vanilla JS
+   Persistencia: localStorage  |  Voz: Web Speech API
+   ============================================================ */
+
+const STORE_KEY = 'duckquest_state';
+
+/* ============================================================
+   1. DATOS LINGÜÍSTICOS
+   ============================================================ */
+
+/* 36 conceptos, agrupados en 6 unidades (una por nivel MCER) */
+const GLOSS = {
+  es: ['hola','buenos días','buenas noches','gracias','por favor','adiós','uno','dos','tres','rojo','azul','verde','madre','padre','hermano','hermana','amigo','familia','agua','pan','café','té','leche','manzana','lunes','hoy','mañana','ayer','mañana (temprano)','noche','disculpe','¿dónde está?','¿cuánto cuesta?','no entiendo','lo siento','bienvenido'],
+  en: ['hello','good morning','good night','thank you','please','goodbye','one','two','three','red','blue','green','mother','father','brother','sister','friend','family','water','bread','coffee','tea','milk','apple','Monday','today','tomorrow','yesterday','morning','night','excuse me','where is it?','how much?',"I don't understand",'sorry','welcome'],
+  pt: ['olá','bom dia','boa noite','obrigado','por favor','adeus','um','dois','três','vermelho','azul','verde','mãe','pai','irmão','irmã','amigo','família','água','pão','café','chá','leite','maçã','segunda-feira','hoje','amanhã','ontem','manhã','noite','com licença','onde está?','quanto custa?','não entendo','desculpe','bem-vindo'],
+  fr: ['bonjour','bonjour','bonne nuit','merci',"s'il vous plaît",'au revoir','un','deux','trois','rouge','bleu','vert','mère','père','frère','sœur','ami','famille','eau','pain','café','thé','lait','pomme','lundi',"aujourd'hui",'demain','hier','matin','nuit','excusez-moi','où est-ce ?','combien ?','je ne comprends pas','désolé','bienvenue']
+};
+
+const LEX = {
+  en: ['Hello','Good morning','Good night','Thank you','Please','Goodbye','One','Two','Three','Red','Blue','Green','Mother','Father','Brother','Sister','Friend','Family','Water','Bread','Coffee','Tea','Milk','Apple','Monday','Today','Tomorrow','Yesterday','Morning','Night','Excuse me','Where is it?','How much?',"I don't understand",'Sorry','Welcome'],
+  fr: ['Bonjour','Bonjour','Bonne nuit','Merci',"S'il vous plaît",'Au revoir','Un','Deux','Trois','Rouge','Bleu','Vert','Mère','Père','Frère','Sœur','Ami','Famille','Eau','Pain','Café','Thé','Lait','Pomme','Lundi',"Aujourd'hui",'Demain','Hier','Matin','Nuit','Excusez-moi','Où est-ce ?','Combien ?','Je ne comprends pas','Désolé','Bienvenue'],
+  de: ['Hallo','Guten Morgen','Gute Nacht','Danke','Bitte','Auf Wiedersehen','Eins','Zwei','Drei','Rot','Blau','Grün','Mutter','Vater','Bruder','Schwester','Freund','Familie','Wasser','Brot','Kaffee','Tee','Milch','Apfel','Montag','Heute','Morgen','Gestern','Morgen','Nacht','Entschuldigung','Wo ist es?','Wie viel?','Ich verstehe nicht','Es tut mir leid','Willkommen'],
+  it: ['Ciao','Buongiorno','Buonanotte','Grazie','Per favore','Arrivederci','Uno','Due','Tre','Rosso','Blu','Verde','Madre','Padre','Fratello','Sorella','Amico','Famiglia','Acqua','Pane','Caffè','Tè','Latte','Mela','Lunedì','Oggi','Domani','Ieri','Mattina','Notte','Scusi',"Dov'è?",'Quanto costa?','Non capisco','Mi dispiace','Benvenuto'],
+  pt: ['Olá','Bom dia','Boa noite','Obrigado','Por favor','Adeus','Um','Dois','Três','Vermelho','Azul','Verde','Mãe','Pai','Irmão','Irmã','Amigo','Família','Água','Pão','Café','Chá','Leite','Maçã','Segunda-feira','Hoje','Amanhã','Ontem','Manhã','Noite','Com licença','Onde está?','Quanto custa?','Não entendo','Desculpe','Bem-vindo'],
+  ru: ['Привет','Доброе утро','Спокойной ночи','Спасибо','Пожалуйста','До свидания','Один','Два','Три','Красный','Синий','Зелёный','Мать','Отец','Брат','Сестра','Друг','Семья','Вода','Хлеб','Кофе','Чай','Молоко','Яблоко','Понедельник','Сегодня','Завтра','Вчера','Утро','Ночь','Извините','Где это?','Сколько стоит?','Я не понимаю','Простите','Добро пожаловать'],
+  zh: ['你好','早上好','晚安','谢谢','请','再见','一','二','三','红色','蓝色','绿色','妈妈','爸爸','哥哥','姐姐','朋友','家庭','水','面包','咖啡','茶','牛奶','苹果','星期一','今天','明天','昨天','早上','晚上','不好意思','在哪里？','多少钱？','我不懂','对不起','欢迎'],
+  ja: ['こんにちは','おはよう','おやすみ','ありがとう','お願いします','さようなら','一','二','三','赤','青','緑','母','父','兄','姉','友達','家族','水','パン','コーヒー','お茶','牛乳','りんご','月曜日','今日','明日','昨日','朝','夜','すみません','どこですか','いくらですか','わかりません','ごめんなさい','ようこそ'],
+  ko: ['안녕하세요','좋은 아침','안녕히 주무세요','감사합니다','주세요','안녕히 가세요','하나','둘','셋','빨강','파랑','초록','어머니','아버지','형','누나','친구','가족','물','빵','커피','차','우유','사과','월요일','오늘','내일','어제','아침','밤','실례합니다','어디예요?','얼마예요?','이해가 안 돼요','미안합니다','환영합니다']
+};
+
+/* Romanización para lenguas no latinas */
+const ROMAN = {
+  ru: ['privet','dobroye utro','spokoynoy nochi','spasibo','pozhaluysta','do svidaniya','odin','dva','tri','krasnyy','siniy','zelyonyy',"mat'",'otets','brat','sestra','drug',"sem'ya",'voda','khleb','kofe','chay','moloko','yabloko',"ponedel'nik",'segodnya','zavtra','vchera','utro',"noch'",'izvinite','gde eto?',"skol'ko stoit?",'ya ne ponimayu','prostite','dobro pozhalovat'],
+  zh: ['nǐ hǎo','zǎoshang hǎo',"wǎn'ān",'xièxie','qǐng','zàijiàn','yī','èr','sān','hóngsè','lánsè','lǜsè','māma','bàba','gēge','jiějie','péngyou','jiātíng','shuǐ','miànbāo','kāfēi','chá','niúnǎi','píngguǒ','xīngqīyī','jīntiān','míngtiān','zuótiān','zǎoshang','wǎnshang','bù hǎoyìsi','zài nǎlǐ?','duōshao qián?','wǒ bù dǒng','duìbuqǐ','huānyíng'],
+  ja: ['konnichiwa','ohayō','oyasumi','arigatō','onegaishimasu','sayōnara','ichi','ni','san','aka','ao','midori','haha','chichi','ani','ane','tomodachi','kazoku','mizu','pan','kōhī','ocha','gyūnyū','ringo','getsuyōbi','kyō','ashita','kinō','asa','yoru','sumimasen','doko desu ka','ikura desu ka','wakarimasen','gomen nasai','yōkoso'],
+  ko: ['annyeonghaseyo','joeun achim','annyeonghi jumuseyo','gamsahamnida','juseyo','annyeonghi gaseyo','hana','dul','set','ppalgang','parang','chorok','eomeoni','abeoji','hyeong','nuna','chingu','gajok','mul','ppang','keopi','cha','uyu','sagwa','woryoil','oneul','naeil','eoje','achim','bam','sillyehamnida','eodiyeyo?','eolmayeyo?','ihaega an dwaeyo','mianhamnida','hwanyeonghamnida']
+};
+
+/* Idiomas nativos (interfaz + glosas) */
+const NATIVE_LANGS = [
+  { code:'es', label:'Español' },
+  { code:'en', label:'English' },
+  { code:'pt', label:'Português' },
+  { code:'fr', label:'Français' }
+];
+
+/* Idiomas objetivo (con código BCP-47 para Web Speech API) */
+const TARGET_LANGS = [
+  { code:'en', tts:'en-US', flag:'🇬🇧', name:{ es:'Inglés', en:'English', pt:'Inglês', fr:'Anglais' } },
+  { code:'fr', tts:'fr-FR', flag:'🇫🇷', name:{ es:'Francés', en:'French', pt:'Francês', fr:'Français' } },
+  { code:'de', tts:'de-DE', flag:'🇩🇪', name:{ es:'Alemán', en:'German', pt:'Alemão', fr:'Allemand' } },
+  { code:'it', tts:'it-IT', flag:'🇮🇹', name:{ es:'Italiano', en:'Italian', pt:'Italiano', fr:'Italien' } },
+  { code:'pt', tts:'pt-BR', flag:'🇵🇹', name:{ es:'Portugués', en:'Portuguese', pt:'Português', fr:'Portugais' } },
+  { code:'ru', tts:'ru-RU', flag:'🇷🇺', roman:true, name:{ es:'Ruso', en:'Russian', pt:'Russo', fr:'Russe' } },
+  { code:'zh', tts:'zh-CN', flag:'🇨🇳', roman:true, name:{ es:'Chino Mandarín', en:'Mandarin Chinese', pt:'Chinês Mandarim', fr:'Chinois Mandarin' } },
+  { code:'ja', tts:'ja-JP', flag:'🇯🇵', roman:true, name:{ es:'Japonés', en:'Japanese', pt:'Japonês', fr:'Japonais' } },
+  { code:'ko', tts:'ko-KR', flag:'🇰🇷', roman:true, name:{ es:'Coreano', en:'Korean', pt:'Coreano', fr:'Coréen' } }
+];
+
+/* Unidades: 1 por nivel MCER, 6 conceptos cada una */
+const UNITS = [
+  { level:'A1', start:0,  end:6,  icon:'fa-comments',      title:{ es:'Saludos',            en:'Greetings',        pt:'Saudações',         fr:'Salutations' } },
+  { level:'A2', start:6,  end:12, icon:'fa-palette',       title:{ es:'Números y Colores',  en:'Numbers & Colors', pt:'Números e Cores',   fr:'Nombres et Couleurs' } },
+  { level:'B1', start:12, end:18, icon:'fa-people-group',  title:{ es:'Familia y Personas', en:'Family & People',  pt:'Família e Pessoas', fr:'Famille et Personnes' } },
+  { level:'B2', start:18, end:24, icon:'fa-utensils',      title:{ es:'Comida y Bebida',    en:'Food & Drink',     pt:'Comida e Bebida',   fr:'Nourriture et Boissons' } },
+  { level:'C1', start:24, end:30, icon:'fa-clock',         title:{ es:'Días y Horas',       en:'Days & Time',      pt:'Dias e Horas',      fr:'Jours et Heures' } },
+  { level:'C2', start:30, end:36, icon:'fa-comment-dots',  title:{ es:'Frases Útiles',      en:'Useful Phrases',   pt:'Frases Úteis',      fr:'Phrases Utiles' } }
+];
+
+const LEVELS = ['A1','A2','B1','B2','C1','C2'];
+const LEVEL_META = {
+  A1:{ icon:'fa-seedling', grad:'from-emerald-400 to-teal-500', text:'text-emerald-300', name:{ es:'Principiante', en:'Beginner', pt:'Iniciante', fr:'Débutant' } },
+  A2:{ icon:'fa-compass',  grad:'from-sky-400 to-blue-500',     text:'text-sky-300',     name:{ es:'Básico', en:'Basic', pt:'Básico', fr:'Élémentaire' } },
+  B1:{ icon:'fa-rocket',   grad:'from-violet-400 to-purple-500',text:'text-violet-300',  name:{ es:'Intermedio', en:'Intermediate', pt:'Intermediário', fr:'Intermédiaire' } },
+  B2:{ icon:'fa-fire',     grad:'from-amber-400 to-orange-500', text:'text-amber-300',   name:{ es:'Intermedio Alto', en:'Upper Intermediate', pt:'Intermediário Avançado', fr:'Intermédiaire Avancé' } },
+  C1:{ icon:'fa-gem',      grad:'from-rose-400 to-pink-500',    text:'text-rose-300',    name:{ es:'Avanzado', en:'Advanced', pt:'Avançado', fr:'Avancé' } },
+  C2:{ icon:'fa-crown',    grad:'from-cyan-400 to-indigo-500',  text:'text-cyan-300',    name:{ es:'Maestría', en:'Mastery', pt:'Maestria', fr:'Maîtrise' } }
+};
+
+/* ============================================================
+   2. INTERFAZ (i18n: es / en / pt / fr)
+   ============================================================ */
+const UI = {
+  es: {
+    tagline:'Aprende idiomas por niveles MCER (A1–C2) con lecciones cortas, pronunciación nativa y progreso guardado en tu navegador.',
+    yourName:'¿Cómo te llamas?', optionalName:'(opcional)',
+    nativeLabel:'Idioma nativo', targetLabel:'Idioma de destino', begin:'Comenzar',
+    noLogin:'Sin registros. Todo se guarda solo en tu dispositivo.',
+    greeting:'¡Hola de nuevo!', totalProgress:'Progreso total',
+    home:'Inicio', route:'Ruta', profile:'Perfil', streak:'Racha', xp:'Experiencia', lessons:'Lecciones', days:'días',
+    yourPath:'Tu ruta MCER', back:'Volver al inicio', unit:'Unidad', lessonWord:'lecciones',
+    vocab:'Vocabulario', practice:'Práctica', card:'Tarjeta', of:'de',
+    listen:'Escuchar', showTranslation:'Mostrar traducción', next:'Siguiente', finishLesson:'Finalizar lección',
+    question:'Pregunta', hits:'aciertos', selectAnswer:'Selecciona una respuesta',
+    completeTitle:'¡Lección completada!', seeResult:'Ver resultado', nextQuestion:'Siguiente pregunta',
+    continueBtn:'Continuar', repeatLesson:'Repetir lección', xpPoints:'puntos de experiencia',
+    achievements:'Tus logros', settings:'Ajustes', completedLessons:'Lecciones completadas',
+    voiceSpeed:'Velocidad de voz', speedNormal:'Normal', speedSlow:'Pausada',
+    resetProgress:'Borrar todo mi progreso',
+    resetConfirm:'¿Seguro que quieres borrar TODO tu progreso, XP y racha? Esta acción no se puede deshacer.',
+    wellDone:'¡Bien hecho!', review:'repaso', welcomeMsg:'¡Bienvenido a DuckQuest!',
+    pathLocked:'Completa el 60% del nivel anterior para desbloquear',
+    allDoneTitle:'¡Has completado todo el curso!', allDoneDesc:'Eres oficialmente un DuckMaster. 🎓',
+    noTTS:'Tu navegador no soporta síntesis de voz', howSay:'¿Cómo se dice', whatMeans:'¿Qué significa',
+    listenChoose:'Escucha y elige el significado', proficiency:'MCER', resume:'Continuar',
+    changeLangs:'Idiomas', nativeShort:'Nativo', targetShort:'Objetivo',
+    badges:{ first:{n:'Primeros pasos',d:'Completa 1 lección'}, ten:{n:'Estudioso',d:'Completa 10 lecciones'},
+      half:{n:'A mitad de camino',d:'50% del curso'}, all:{n:'Políglota',d:'Completa todo el curso'},
+      streak3:{n:'En racha',d:'3 días seguidos'}, streak7:{n:'Imparable',d:'7 días seguidos'}, xp500:{n:'Energía',d:'Acumula 500 XP'} }
+  },
+  en: {
+    tagline:'Learn languages by CEFR levels (A1–C2) with short lessons, native pronunciation and progress saved in your browser.',
+    yourName:'What is your name?', optionalName:'(optional)',
+    nativeLabel:'Native language', targetLabel:'Target language', begin:'Start',
+    noLogin:'No sign-up. Everything is stored only on your device.',
+    greeting:'Welcome back!', totalProgress:'Total progress',
+    home:'Home', route:'Path', profile:'Profile', streak:'Streak', xp:'XP', lessons:'Lessons', days:'days',
+    yourPath:'Your CEFR path', back:'Back to home', unit:'Unit', lessonWord:'lessons',
+    vocab:'Vocabulary', practice:'Practice', card:'Card', of:'of',
+    listen:'Listen', showTranslation:'Show translation', next:'Next', finishLesson:'Finish lesson',
+    question:'Question', hits:'correct', selectAnswer:'Select an answer',
+    completeTitle:'Lesson complete!', seeResult:'See result', nextQuestion:'Next question',
+    continueBtn:'Continue', repeatLesson:'Repeat lesson', xpPoints:'experience points',
+    achievements:'Your achievements', settings:'Settings', completedLessons:'Completed lessons',
+    voiceSpeed:'Voice speed', speedNormal:'Normal', speedSlow:'Slow',
+    resetProgress:'Delete all my progress',
+    resetConfirm:'Are you sure you want to delete ALL your progress, XP and streak? This cannot be undone.',
+    wellDone:'Well done!', review:'review', welcomeMsg:'Welcome to DuckQuest!',
+    pathLocked:'Complete 60% of the previous level to unlock',
+    allDoneTitle:'You have completed the whole course!', allDoneDesc:'You are officially a DuckMaster. 🎓',
+    noTTS:'Your browser does not support speech synthesis', howSay:'How do you say', whatMeans:'What does it mean',
+    listenChoose:'Listen and choose the meaning', proficiency:'CEFR', resume:'Continue',
+    changeLangs:'Languages', nativeShort:'Native', targetShort:'Target',
+    badges:{ first:{n:'First steps',d:'Complete 1 lesson'}, ten:{n:'Bookworm',d:'Complete 10 lessons'},
+      half:{n:'Halfway there',d:'50% of the course'}, all:{n:'Polyglot',d:'Complete every lesson'},
+      streak3:{n:'On fire',d:'3 days in a row'}, streak7:{n:'Unstoppable',d:'7 days in a row'}, xp500:{n:'Energized',d:'Earn 500 XP'} }
+  },
+  pt: {
+    tagline:'Aprenda idiomas por níveis MCER (A1–C2) com lições curtas, pronúncia nativa e progresso salvo no navegador.',
+    yourName:'Como você se chama?', optionalName:'(opcional)',
+    nativeLabel:'Idioma nativo', targetLabel:'Idioma de destino', begin:'Começar',
+    noLogin:'Sem cadastro. Tudo é salvo apenas no seu dispositivo.',
+    greeting:'Olá de novo!', totalProgress:'Progresso total',
+    home:'Início', route:'Trilha', profile:'Perfil', streak:'Sequência', xp:'XP', lessons:'Lições', days:'dias',
+    yourPath:'Sua trilha MCER', back:'Voltar ao início', unit:'Unidade', lessonWord:'lições',
+    vocab:'Vocabulário', practice:'Prática', card:'Cartão', of:'de',
+    listen:'Ouvir', showTranslation:'Mostrar tradução', next:'Próximo', finishLesson:'Finalizar lição',
+    question:'Pergunta', hits:'acertos', selectAnswer:'Selecione uma resposta',
+    completeTitle:'Lição concluída!', seeResult:'Ver resultado', nextQuestion:'Próxima pergunta',
+    continueBtn:'Continuar', repeatLesson:'Repetir lição', xpPoints:'pontos de experiência',
+    achievements:'Suas conquistas', settings:'Configurações', completedLessons:'Lições concluídas',
+    voiceSpeed:'Velocidade da voz', speedNormal:'Normal', speedSlow:'Lenta',
+    resetProgress:'Apagar todo o meu progresso',
+    resetConfirm:'Tem certeza de que deseja apagar TODO o seu progresso, XP e sequência? Isso não pode ser desfeito.',
+    wellDone:'Muito bem!', review:'revisão', welcomeMsg:'Bem-vindo ao DuckQuest!',
+    pathLocked:'Complete 60% do nível anterior para desbloquear',
+    allDoneTitle:'Você concluiu todo o curso!', allDoneDesc:'Você é oficialmente um DuckMaster. 🎓',
+    noTTS:'Seu navegador não suporta síntese de voz', howSay:'Como se diz', whatMeans:'O que significa',
+    listenChoose:'Ouça e escolha o significado', proficiency:'MCER', resume:'Continuar',
+    changeLangs:'Idiomas', nativeShort:'Nativo', targetShort:'Objetivo',
+    badges:{ first:{n:'Primeiros passos',d:'Conclua 1 lição'}, ten:{n:'Estudioso',d:'Conclua 10 lições'},
+      half:{n:'Na metade',d:'50% do curso'}, all:{n:'Poliglota',d:'Conclua todo o curso'},
+      streak3:{n:'Em chamas',d:'3 dias seguidos'}, streak7:{n:'Imparável',d:'7 dias seguidos'}, xp500:{n:'Energia',d:'Acumule 500 XP'} }
+  },
+  fr: {
+    tagline:'Apprenez les langues par niveaux CECRL (A1–C2) avec des leçons courtes, une prononciation native et une progression enregistrée dans votre navigateur.',
+    yourName:'Comment vous appelez-vous ?', optionalName:'(facultatif)',
+    nativeLabel:'Langue maternelle', targetLabel:'Langue cible', begin:'Commencer',
+    noLogin:'Sans inscription. Tout est enregistré uniquement sur votre appareil.',
+    greeting:'Bon retour !', totalProgress:'Progression totale',
+    home:'Accueil', route:'Parcours', profile:'Profil', streak:'Série', xp:'XP', lessons:'Leçons', days:'jours',
+    yourPath:'Votre parcours CECRL', back:'Retour à l\'accueil', unit:'Unité', lessonWord:'leçons',
+    vocab:'Vocabulaire', practice:'Exercice', card:'Carte', of:'sur',
+    listen:'Écouter', showTranslation:'Afficher la traduction', next:'Suivant', finishLesson:'Terminer la leçon',
+    question:'Question', hits:'bonnes réponses', selectAnswer:'Sélectionnez une réponse',
+    completeTitle:'Leçon terminée !', seeResult:'Voir le résultat', nextQuestion:'Question suivante',
+    continueBtn:'Continuer', repeatLesson:'Refaire la leçon', xpPoints:'points d\'expérience',
+    achievements:'Vos succès', settings:'Paramètres', completedLessons:'Leçons terminées',
+    voiceSpeed:'Vitesse de la voix', speedNormal:'Normale', speedSlow:'Lente',
+    resetProgress:'Effacer toute ma progression',
+    resetConfirm:'Voulez-vous vraiment effacer TOUTE votre progression, XP et série ? Action irréversible.',
+    wellDone:'Bien joué !', review:'révision', welcomeMsg:'Bienvenue sur DuckQuest !',
+    pathLocked:'Terminez 60% du niveau précédent pour débloquer',
+    allDoneTitle:'Vous avez terminé tout le cours !', allDoneDesc:'Vous êtes officiellement un DuckMaster. 🎓',
+    noTTS:'Votre navigateur ne prend pas en charge la synthèse vocale', howSay:'Comment dit-on', whatMeans:'Que signifie',
+    listenChoose:'Écoutez et choisissez le sens', proficiency:'CECRL', resume:'Continuer',
+    changeLangs:'Langues', nativeShort:'Maternelle', targetShort:'Cible',
+    badges:{ first:{n:'Premiers pas',d:'Terminez 1 leçon'}, ten:{n:'Studieux',d:'Terminez 10 leçons'},
+      half:{n:'À mi-chemin',d:'50% du cours'}, all:{n:'Polyglotte',d:'Terminez tout le cours'},
+      streak3:{n:'En feu',d:'3 jours d\'affilée'}, streak7:{n:'Inarrêtable',d:'7 jours d\'affilée'}, xp500:{n:'Énergie',d:'Cumulez 500 XP'} }
+  }
+};
+
+/* ============================================================
+   3. ESTADO Y ALMACENAMIENTO
+   ============================================================ */
+const DEFAULT_STATE = {
+  profile: null,          // { name, native:'es', target:'en', createdAt }
+  xp: 0,
+  streak: 0,
+  lastActive: null,
+  completed: {},          // { "en:A1:v": true, "en:A1:q": true, ... }
+  settings: { rate: 0.9 }
+};
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let uiLang = 'es';
+let screen = { name:'home' };
+let player = null;
+let setupDraft = { name:'', native:'es', target:'en' };
+
+function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} }
+function load(){
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch(e){}
+  if (state.profile && state.profile.native && UI[state.profile.native]){
+  uiLang = state.profile.native;
+  setupDraft.native = state.profile.native;
+  setupDraft.target = state.profile.target || 'en';
+  if (state.profile.name) setupDraft.name = state.profile.name;
+}
+}
+
+/* ============================================================
+   4. UTILIDADES
+   ============================================================ */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function t(key){ const pack = UI[uiLang] || UI.es; return (pack[key] !== undefined ? pack[key] : UI.es[key]); }
+function badgeText(id, field){ const pack = UI[uiLang] || UI.es; const b = pack.badges[id]; return b ? b[field] : UI.es.badges[id][field]; }
+function targetLang(code){ return TARGET_LANGS.find(l => l.code === code) || TARGET_LANGS[0]; }
+function targetName(code){ const l = targetLang(code); return l.name[uiLang] || l.name.en; }
+function unitTitle(unit){ return unit.title[uiLang] || unit.title.en; }
+function levelName(level){ const m = LEVEL_META[level]; return m.name[uiLang] || m.name.en; }
+function romanFor(code, idx){ return ROMAN[code] ? ROMAN[code][idx] : null; }
+function curTarget(){ return (state.profile && state.profile.target) || 'en'; }
+function curNative(){ return (state.profile && state.profile.native) || 'es'; }
+
+/* ============================================================
+   5. TEXT-TO-SPEECH (Web Speech API)
+   ============================================================ */
+function speak(text, langCode){
+  if (!('speechSynthesis' in window)) { toast(t('noTTS'), 'fa-triangle-exclamation'); return; }
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const lc = langCode || targetLang(curTarget()).tts;
+    u.lang = lc;
+    u.rate = state.settings.rate || 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const base = lc.split('-')[0].toLowerCase();
+    const voice = voices.find(v => v.lang && v.lang.toLowerCase() === lc.toLowerCase())
+               || voices.find(v => v.lang && v.lang.toLowerCase().indexOf(base) === 0);
+    if (voice) u.voice = voice;
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+}
+if ('speechSynthesis' in window) { window.speechSynthesis.onvoiceschanged = function(){}; }
+
+/* ============================================================
+   6. PROGRESO / GAMIFICACIÓN
+   ============================================================ */
+function lessonKey(level, kind){ return curTarget() + ':' + level + ':' + kind; }
+function levelStats(level){
+  const u = UNITS.find(x => x.level === level);
+  let done = 0;
+  ['v','q'].forEach(k => { if (state.completed[lessonKey(level, k)]) done++; });
+  return { total:2, done:done, pct: Math.round(done / 2 * 100) };
+}
+function overallStats(){
+  let done = 0;
+  LEVELS.forEach(lv => { ['v','q'].forEach(k => { if (state.completed[lessonKey(lv, k)]) done++; }); });
+  const total = LEVELS.length * 2;
+  return { done:done, total:total, pct: total ? Math.round(done / total * 100) : 0 };
+}
+function isLevelUnlocked(level){
+  const i = LEVELS.indexOf(level);
+  if (i === 0) return true;
+  return levelStats(LEVELS[i-1]).pct >= 50;
+}
+function findNextLesson(){
+  for (const lv of LEVELS){
+    for (const k of ['v','q']){
+      if (!state.completed[lessonKey(lv, k)]) return { level:lv, kind:k };
+    }
+  }
+  return null;
+}
+function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function dayDiff(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000); }
+function touchStreak(){
+  const today = todayStr();
+  if (!state.lastActive) state.streak = 1;
+  else {
+    const diff = dayDiff(state.lastActive, today);
+    if (diff === 1) state.streak += 1;
+    else if (diff > 1) state.streak = 1;
+  }
+  state.lastActive = today;
+}
+function badgeDefs(){
+  const o = overallStats();
+  return [
+    { id:'first', icon:'fa-shoe-prints', ok:o.done >= 1 },
+    { id:'ten',   icon:'fa-book-bookmark', ok:o.done >= 10 },
+    { id:'half',  icon:'fa-mountain-sun', ok:o.pct >= 50 },
+    { id:'all',   icon:'fa-trophy', ok:o.done >= o.total },
+    { id:'streak3', icon:'fa-fire-flame-curved', ok:state.streak >= 3 },
+    { id:'streak7', icon:'fa-fire', ok:state.streak >= 7 },
+    { id:'xp500', icon:'fa-bolt', ok:state.xp >= 500 }
+  ];
+}
+
+/* ============================================================
+   7. GENERADOR DE EJERCICIOS (a partir de los conceptos)
+   ============================================================ */
+function conceptPoolTarget(lang){ return LEX[lang] || LEX.en; }
+function conceptPoolNative(nat){ return GLOSS[nat] || GLOSS.es; }
+function pickOptions(correct, pool){
+  const opts = [correct];
+  const used = {}; used[correct] = true;
+  const cand = pool.filter(x => !used[x]);
+  for (let i = cand.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); const tmp = cand[i]; cand[i] = cand[j]; cand[j] = tmp; }
+  for (let i = 0; i < cand.length && opts.length < 4; i++){ if (!used[cand[i]]){ opts.push(cand[i]); used[cand[i]] = true; } }
+  for (let i = opts.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp; }
+  return { options: opts, answer: opts.indexOf(correct) };
+}
+function buildQuestions(level){
+  const unit = UNITS.find(u => u.level === level);
+  const lang = curTarget();
+  const nat = curNative();
+  const tPool = conceptPoolTarget(lang);
+  const nPool = conceptPoolNative(nat);
+  const qs = [];
+  for (let i = unit.start; i < unit.end; i++){
+    // Nativo -> Objetivo
+    let r = pickOptions(tPool[i], tPool);
+    qs.push({ kind:'n2t', sub:t('howSay'), prompt:nPool[i], options:r.options, answer:r.answer });
+    // Objetivo -> Nativo
+    r = pickOptions(nPool[i], nPool);
+    qs.push({ kind:'t2n', sub:t('whatMeans'), prompt:tPool[i], audio:tPool[i], options:r.options, answer:r.answer });
+  }
+  // Escucha (para el primer concepto de la unidad)
+  const first = unit.start;
+  const rl = pickOptions(nPool[first], nPool);
+  qs.push({ kind:'listen', sub:t('listenChoose'), prompt:'', audio:tPool[first], options:rl.options, answer:rl.answer });
+  return qs;
+}
+function buildCards(level){
+  const unit = UNITS.find(u => u.level === level);
+  const lang = curTarget();
+  const nat = curNative();
+  const cards = [];
+  for (let i = unit.start; i < unit.end; i++){
+    cards.push({ idx:i, word:LEX[lang][i], gloss:GLOSS[nat][i], roman:romanFor(lang, i) });
+  }
+  return cards;
+}
+
+/* ============================================================
+   8. TOAST
+   ============================================================ */
+let toastTimer = null;
+function toast(msg, icon){
+  const el = document.getElementById('toast');
+  el.innerHTML = '<div class="animate-toast flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/95 px-4 py-3 shadow-2xl backdrop-blur">'
+    + '<i class="fa-solid ' + (icon || 'fa-circle-check') + ' text-brand-400"></i>'
+    + '<span class="text-sm font-medium">' + esc(msg) + '</span></div>';
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 2200);
+}
+
+/* ============================================================
+   9. VISTAS
+   ============================================================ */
+function setupScreen(){
+  const nativeOpts = NATIVE_LANGS.map(l =>
+    '<option value="' + l.code + '"' + (l.code === setupDraft.native ? ' selected' : '') + '>' + l.label + '</option>').join('');
+  const targetOpts = TARGET_LANGS.map(l =>
+    '<option value="' + l.code + '"' + (l.code === setupDraft.target ? ' selected' : '') + '>' + l.flag + ' ' + esc(l.name[uiLang] || l.name.en) + '</option>').join('');
+
+  return ''
+  + '<div class="min-h-screen grid-bg relative overflow-hidden">'
+  +   '<div class="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full bg-brand-600/30 blur-3xl"></div>'
+  +   '<div class="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl"></div>'
+  +   '<div class="relative max-w-lg mx-auto px-5 py-14">'
+  +     '<div class="text-center animate-fadeUp">'
+  +       '<div class="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-brand-500 to-cyan-500 shadow-2xl shadow-brand-900/50">'
+  +         '<i class="fa-solid fa-feather text-3xl text-white"></i></div>'
+  +       '<h1 class="text-4xl font-extrabold tracking-tight">Duck<span class="text-brand-400">Quest</span></h1>'
+  +       '<p class="mt-2 text-slate-400">' + esc(t('tagline')) + '</p>'
+  +     '</div>'
+  +     '<div class="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl backdrop-blur animate-fadeUp">'
+  +       '<label class="mb-1 block text-sm font-medium text-slate-300">' + esc(t('yourName')) + ' <span class="text-slate-500">' + esc(t('optionalName')) + '</span></label>'
+  +       '<input id="setupName" maxlength="24" value="' + esc(setupDraft.name) + '" placeholder="Estudiante" '
+  +         'class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-100 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">'
+  +       '<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">'
+  +         '<div><label class="mb-1 block text-sm font-medium text-slate-300">' + esc(t('nativeLabel')) + '</label>'
+  +           '<select id="setupNative" class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-slate-100 outline-none focus:border-brand-500">' + nativeOpts + '</select></div>'
+  +         '<div><label class="mb-1 block text-sm font-medium text-slate-300">' + esc(t('targetLabel')) + '</label>'
+  +           '<select id="setupTarget" class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-slate-100 outline-none focus:border-brand-500">' + targetOpts + '</select></div>'
+  +       '</div>'
+  +       '<button data-action="start" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+  +         esc(t('begin')) + ' <i class="fa-solid fa-arrow-right ml-1"></i></button>'
+  +       '<p class="mt-3 text-center text-xs text-slate-500"><i class="fa-solid fa-lock mr-1"></i>' + esc(t('noLogin')) + '</p>'
+  +     '</div>'
+  +   '</div>'
+  + '</div>';
+}
+
+function header(){
+  const stat = function(icon, value, label, color){
+    return '<div class="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-1.5">'
+      + '<i class="fa-solid ' + icon + ' ' + color + '"></i>'
+      + '<span class="text-sm font-bold">' + value + '</span>'
+      + '<span class="hidden text-xs text-slate-400 sm:inline">' + esc(label) + '</span></div>';
+  };
+  const lg = targetLang(curTarget());
+  return ''
+  + '<header class="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur">'
+  +   '<div class="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">'
+  +     '<button data-action="nav-home" class="flex items-center gap-2">'
+  +       '<span class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500"><i class="fa-solid fa-feather text-white"></i></span>'
+  +       '<span class="hidden text-lg font-extrabold tracking-tight sm:inline">Duck<span class="text-brand-400">Quest</span></span>'
+  +       '<span class="rounded-full border border-white/10 bg-slate-900/60 px-2 py-0.5 text-xs font-semibold">' + lg.flag + ' ' + esc(targetName(lg.code)) + '</span>'
+  +     '</button>'
+  +     '<div class="flex items-center gap-2">'
+  +       stat('fa-fire', state.streak, t('streak'), 'text-amber-400')
+  +       stat('fa-bolt', state.xp, t('xp'), 'text-brand-400')
+  +     '</div>'
+  +   '</div>'
+  + '</header>';
+}
+
+function bottomNav(){
+  const item = function(action, icon, label, active){
+    return '<button data-action="' + action + '" class="flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-medium transition '
+      + (active ? 'bg-brand-500/15 text-brand-300' : 'text-slate-400 hover:text-slate-200') + '">'
+      + '<i class="fa-solid ' + icon + ' text-lg"></i>' + esc(label) + '</button>';
+  };
+  return ''
+  + '<nav class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/90 backdrop-blur">'
+  +   '<div class="mx-auto flex max-w-md gap-1 px-3 py-2">'
+  +     item('nav-home','fa-house', t('home'), screen.name === 'home')
+  +     item('nav-path','fa-route', t('route'), screen.name === 'path')
+  +     item('nav-profile','fa-user', t('profile'), screen.name === 'profile')
+  +   '</div>'
+  + '</nav>';
+}
+
+function progressBar(pct, grad){
+  return '<div class="h-2 w-full overflow-hidden rounded-full bg-white/10">'
+    + '<div class="h-full rounded-full bg-gradient-to-r ' + (grad || 'from-brand-500 to-cyan-500') + ' transition-all" style="width:' + pct + '%"></div></div>';
+}
+
+function homeScreen(){
+  const o = overallStats();
+  const next = findNextLesson();
+  const name = state.profile && state.profile.name ? state.profile.name : '';
+
+  let continueHtml;
+  if (next){
+    const meta = LEVEL_META[next.level];
+    const title = next.kind === 'v' ? (unitTitle(UNITS.find(u=>u.level===next.level)) + ' · ' + t('vocab')) : (unitTitle(UNITS.find(u=>u.level===next.level)) + ' · ' + t('practice'));
+    continueHtml = ''
+    + '<button data-action="resume" class="group w-full text-left">'
+    +   '<div class="flex items-center gap-4 rounded-3xl border border-brand-500/30 bg-gradient-to-r from-brand-600/20 to-cyan-500/10 p-5 transition hover:border-brand-400/50">'
+    +     '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + (next.kind === 'v' ? 'fa-book' : 'fa-circle-question') + ' text-white"></i></span>'
+    +     '<span class="min-w-0 flex-1">'
+    +       '<span class="block text-xs font-semibold uppercase tracking-wider text-brand-300">' + esc(t('resume')) + ' · ' + next.level + '</span>'
+    +       '<span class="block truncate text-lg font-bold">' + esc(title) + '</span>'
+    +     '</span>'
+    +     '<i class="fa-solid fa-circle-play text-2xl text-brand-300 transition group-hover:scale-110"></i>'
+    +   '</div>'
+    + '</button>';
+  } else {
+    continueHtml = ''
+    + '<div class="flex items-center gap-4 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5">'
+    +   '<span class="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500"><i class="fa-solid fa-trophy text-white"></i></span>'
+    +   '<div><p class="font-bold">' + esc(t('allDoneTitle')) + '</p><p class="text-sm text-slate-400">' + esc(t('allDoneDesc')) + '</p></div>'
+    + '</div>';
+  }
+
+  const statCard = function(icon, color, value, label){
+    return '<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-center">'
+      + '<i class="fa-solid ' + icon + ' text-xl ' + color + '"></i>'
+      + '<p class="mt-1.5 text-2xl font-extrabold">' + value + '</p>'
+      + '<p class="text-xs text-slate-400">' + esc(label) + '</p></div>';
+  };
+
+  const levelCards = LEVELS.map(function(lv){
+    const meta = LEVEL_META[lv];
+    const s = levelStats(lv);
+    const unlocked = isLevelUnlocked(lv);
+    return ''
+    + '<button ' + (unlocked ? 'data-action="open-level" data-level="' + lv + '"' : 'data-action="locked"')
+    +   ' class="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-left transition '
+    +   (unlocked ? 'hover:border-white/25 hover:bg-slate-900' : 'opacity-60') + '">'
+    +   '<div class="flex items-center justify-between">'
+    +     '<span class="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + meta.icon + ' text-white"></i></span>'
+    +     (unlocked ? '<span class="text-xs font-bold ' + meta.text + '">' + s.pct + '%</span>' : '<i class="fa-solid fa-lock text-slate-500"></i>')
+    +   '</div>'
+    +   '<p class="mt-3 text-sm font-bold">' + lv + ' · ' + esc(levelName(lv)) + '</p>'
+    +   '<p class="mb-2 text-xs text-slate-400">' + s.done + '/' + s.total + ' ' + esc(t('lessonWord')) + '</p>'
+    +   progressBar(s.pct, meta.grad)
+    + '</button>';
+  }).join('');
+
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   '<div class="flex items-end justify-between gap-3">'
+  +     '<div><p class="text-sm text-slate-400">' + esc(t('greeting')) + '</p><h2 class="text-2xl font-extrabold tracking-tight">' + esc(name) + ' 👋</h2></div>'
+  +     '<div class="text-right"><p class="text-xs text-slate-400">' + esc(t('totalProgress')) + '</p><p class="text-xl font-extrabold text-brand-300">' + o.pct + '%</p></div>'
+  +   '</div>'
+  +   '<div class="mt-3">' + progressBar(o.pct) + '</div>'
+  +   '<div class="mt-6">' + continueHtml + '</div>'
+  +   '<div class="mt-6 grid grid-cols-3 gap-3">'
+  +     statCard('fa-fire','text-amber-400', state.streak, t('streak'))
+  +     statCard('fa-bolt','text-brand-400', state.xp, t('xp'))
+  +     statCard('fa-circle-check','text-emerald-400', o.done + '/' + o.total, t('lessons'))
+  +   '</div>'
+  +   '<div class="mt-8"><h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">' + esc(t('yourPath')) + '</h3>'
+  +     '<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">' + levelCards + '</div>'
+  +   '</div>'
+  + '</section>';
+}
+
+function pathScreen(){
+  const lv = screen.level || 'A1';
+  const meta = LEVEL_META[lv];
+  const unit = UNITS.find(u => u.level === lv);
+  const s = levelStats(lv);
+
+  const lessons = [
+    { kind:'v', type:t('vocab'), icon:'fa-book' },
+    { kind:'q', type:t('practice'), icon:'fa-circle-question' }
+  ];
+  const rows = lessons.map(function(l){
+    const done = !!state.completed[lessonKey(lv, l.kind)];
+    return ''
+    + '<button data-action="start-lesson" data-kind="' + l.kind + '" '
+    +   'class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/5">'
+    +   '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg ' + (done ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-300') + '">'
+    +     '<i class="fa-solid ' + (done ? 'fa-check' : l.icon) + ' text-sm"></i></span>'
+    +   '<span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold ' + (done ? 'text-slate-400' : '') + '">' + esc(l.type) + '</span>'
+    +     '<span class="text-xs text-slate-500">' + (l.kind === 'v' ? t('vocab') : t('practice')) + '</span></span>'
+    +   '<i class="fa-solid ' + (done ? 'fa-circle-check text-emerald-400' : 'fa-chevron-right text-slate-500') + '"></i>'
+    + '</button>';
+  }).join('');
+
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   '<button data-action="nav-home" class="mb-4 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-200"><i class="fa-solid fa-arrow-left"></i> ' + esc(t('back')) + '</button>'
+  +   '<div class="flex items-center gap-4 rounded-3xl border border-white/10 bg-slate-900/60 p-5">'
+  +     '<span class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + meta.icon + ' text-2xl text-white"></i></span>'
+  +     '<div class="flex-1"><div class="flex items-center gap-2"><h2 class="text-xl font-extrabold">' + lv + ' · ' + esc(levelName(lv)) + '</h2>'
+  +       '<span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-300">' + esc(t('proficiency')) + '</span></div>'
+  +       '<p class="text-sm text-slate-400">' + s.done + '/' + s.total + ' ' + esc(t('lessonWord')) + '</p></div>'
+  +     '<span class="text-2xl font-extrabold ' + meta.text + '">' + s.pct + '%</span>'
+  +   '</div>'
+  +   '<div class="mt-3">' + progressBar(s.pct, meta.grad) + '</div>'
+  +   '<div class="mt-6 rounded-2xl border border-white/10 bg-slate-900/60 p-2">'
+  +     '<div class="flex items-center gap-3 p-3">'
+  +       '<span class="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + unit.icon + ' text-white"></i></span>'
+  +       '<div><p class="font-bold">' + esc(unitTitle(unit)) + '</p><p class="text-xs text-slate-400">' + esc(t('unit')) + ' 1 · 2 ' + esc(t('lessonWord')) + '</p></div>'
+  +     '</div>'
+  +     '<div class="space-y-1 px-1 pb-1">' + rows + '</div>'
+  +   '</div>'
+  + '</section>';
+}
+
+function currentLessonMeta(){ return { level:player.level, kind:player.kind }; }
+
+function lessonScreen(){
+  if (player.done) return resultView();
+  return player.kind === 'v' ? vocabView() : quizView();
+}
+
+function lessonHeader(pct){
+  return ''
+  + '<div class="mb-5 flex items-center gap-3">'
+  +   '<button data-action="exit-lesson" class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-slate-900/60 text-slate-300 transition hover:text-white"><i class="fa-solid fa-xmark"></i></button>'
+  +   '<div class="flex-1">' + progressBar(pct) + '</div>'
+  +   '<span class="text-xs font-semibold text-slate-400">' + player.level + '</span>'
+  + '</div>';
+}
+
+function vocabView(){
+  const card = player.cards[player.i];
+  const total = player.cards.length;
+  const pct = Math.round(player.i / total * 100);
+  const unit = UNITS.find(u => u.level === player.level);
+  const isCJK = !!targetLang(curTarget()).roman;
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   lessonHeader(pct)
+  +   '<p class="mb-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('card')) + ' ' + (player.i+1) + ' ' + esc(t('of')) + ' ' + total + '</p>'
+  +   '<h2 class="mb-5 text-center text-lg font-bold">' + esc(unitTitle(unit)) + ' · ' + esc(t('vocab')) + '</h2>'
+  +   '<div class="animate-pop rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-8 text-center shadow-2xl">'
+  +     '<p class="' + (isCJK ? 'cjk ' : '') + 'text-3xl font-extrabold tracking-tight sm:text-4xl">' + esc(card.word) + '</p>'
+  +     (card.roman ? '<p class="mt-1 text-sm text-slate-400">[' + esc(card.roman) + ']</p>' : '')
+  +     '<div class="mt-4 flex items-center justify-center">'
+  +       '<button data-action="speak" data-text="' + esc(card.word) + '" class="grid h-14 w-14 place-items-center rounded-full border border-brand-500/40 bg-brand-500/10 text-brand-300 transition hover:bg-brand-500/20 pulse-ring">'
+  +         '<i class="fa-solid fa-volume-high text-xl"></i></button>'
+  +     '</div>'
+  +     '<p class="mt-2 text-xs text-slate-500">' + esc(t('listen')) + '</p>'
+  +     (player.revealed
+        ? '<p class="mt-5 border-t border-white/10 pt-5 text-2xl font-bold text-brand-300 animate-fadeUp">' + esc(card.gloss) + '</p>'
+        : '<button data-action="reveal" class="mt-5 w-full rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm font-medium text-slate-400 transition hover:border-white/30 hover:text-slate-200">' + esc(t('showTranslation')) + '</button>')
+  +   '</div>'
+  +   '<button data-action="next" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+  +     (player.i === total-1 ? esc(t('finishLesson')) : esc(t('next'))) + ' <i class="fa-solid fa-arrow-right ml-1"></i></button>'
+  + '</section>';
+}
+
+function quizView(){
+  const qn = player.questions[player.i];
+  const total = player.questions.length;
+  const pct = Math.round(player.i / total * 100);
+  const isCJK = !!targetLang(curTarget()).roman;
+
+  const options = qn.options.map(function(opt, idx){
+    let cls = 'border-white/10 bg-slate-900/60 hover:border-white/25 hover:bg-slate-900';
+    let icon = '';
+    if (player.answered){
+      if (idx === qn.answer){ cls = 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200'; icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>'; }
+      else if (idx === player.chosen){ cls = 'border-rose-500/50 bg-rose-500/15 text-rose-200'; icon = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>'; }
+      else { cls = 'border-white/10 bg-slate-900/40 opacity-60'; }
+    }
+    return ''
+    + '<button data-action="answer" data-index="' + idx + '" ' + (player.answered ? 'disabled' : '') + ' '
+    +   'class="flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 text-left font-medium transition ' + cls + '">'
+    +   '<span class="' + (isCJK ? 'cjk ' : '') + '">' + esc(opt) + '</span>' + icon + '</button>';
+  }).join('');
+
+  let promptBlock = '';
+  if (qn.kind === 'listen'){
+    promptBlock = ''
+    + '<div class="text-center">'
+    +   '<button data-action="speak" data-text="' + esc(qn.audio) + '" class="mx-auto grid h-20 w-20 place-items-center rounded-full border border-brand-500/40 bg-brand-500/10 text-brand-300 transition hover:bg-brand-500/20 pulse-ring">'
+    +     '<i class="fa-solid fa-volume-high text-3xl"></i></button>'
+    +   '<p class="mt-3 text-sm text-slate-400">' + esc(t('listen')) + '</p>'
+    + '</div>';
+  } else if (qn.kind === 't2n'){
+    promptBlock = ''
+    + '<div class="text-center">'
+    +   '<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(qn.sub) + '</p>'
+    +   '<p class="mt-2 ' + (isCJK ? 'cjk ' : '') + 'text-3xl font-extrabold">' + esc(qn.prompt) + '</p>'
+    +   '<button data-action="speak" data-text="' + esc(qn.audio) + '" class="mt-3 inline-flex items-center gap-2 rounded-full border border-brand-500/40 bg-brand-500/10 px-4 py-2 text-sm font-semibold text-brand-300 transition hover:bg-brand-500/20"><i class="fa-solid fa-volume-high"></i> ' + esc(t('listen')) + '</button>'
+    + '</div>';
+  } else {
+    promptBlock = ''
+    + '<div class="text-center">'
+    +   '<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(qn.sub) + '</p>'
+    +   '<p class="mt-2 text-2xl font-extrabold leading-snug">' + esc(qn.prompt) + '</p>'
+    + '</div>';
+  }
+
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   lessonHeader(pct)
+  +   '<p class="mb-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('question')) + ' ' + (player.i+1) + ' ' + esc(t('of')) + ' ' + total + '</p>'
+  +   '<div class="mb-5 flex items-center justify-center gap-2"><i class="fa-solid fa-bolt text-brand-400"></i><span class="text-sm font-semibold text-slate-300">' + player.correct + ' ' + esc(t('hits')) + '</span></div>'
+  +   '<div class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl">'
+  +     promptBlock
+  +     '<div class="mt-6 space-y-2.5">' + options + '</div>'
+  +   '</div>'
+  +   (player.answered
+      ? '<button data-action="next" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+        + (player.i === total-1 ? esc(t('seeResult')) : esc(t('nextQuestion'))) + ' <i class="fa-solid fa-arrow-right ml-1"></i></button>'
+      : '<p class="mt-4 text-center text-sm text-slate-500">' + esc(t('selectAnswer')) + '</p>')
+  + '</section>';
+}
+
+function resultView(){
+  const isQuiz = player.kind === 'q';
+  const total = isQuiz ? player.questions.length : player.cards.length;
+  const perfect = isQuiz && player.correct === total;
+  const unit = UNITS.find(u => u.level === player.level);
+  return ''
+  + '<section class="animate-pop text-center">'
+  +   '<div class="mx-auto mt-6 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-cyan-500 shadow-2xl shadow-brand-900/50">'
+  +     '<i class="fa-solid fa-' + (perfect ? 'star' : 'flag-checkered') + ' text-4xl text-white"></i></div>'
+  +   '<h2 class="mt-5 text-2xl font-extrabold">' + esc(t('completeTitle')) + '</h2>'
+  +   '<p class="text-slate-400">' + esc(unitTitle(unit)) + ' · ' + (isQuiz ? esc(t('practice')) : esc(t('vocab'))) + '</p>'
+  +   (isQuiz ? '<p class="mt-1 text-sm text-slate-400">' + esc(t('hits')) + ': <span class="font-bold text-slate-200">' + player.correct + '/' + total + '</span></p>' : '')
+  +   '<div class="mx-auto mt-6 flex max-w-xs items-center justify-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-6 py-4">'
+  +     '<i class="fa-solid fa-bolt text-2xl text-brand-400"></i>'
+  +     '<div class="text-left"><p class="text-2xl font-extrabold">+' + player.xpEarned + '</p><p class="text-xs text-slate-400">' + esc(t('xpPoints')) + '</p></div>'
+  +   '</div>'
+  +   '<div class="mt-8 space-y-3">'
+  +     '<button data-action="back-path" class="w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">' + esc(t('continueBtn')) + '</button>'
+  +     '<button data-action="retry" class="w-full rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 font-semibold text-slate-200 transition hover:bg-slate-900">' + esc(t('repeatLesson')) + '</button>'
+  +   '</div>'
+  + '</section>';
+}
+
+function profileScreen(){
+  const o = overallStats();
+  const meta = state.profile || {};
+  const nativeOpts = NATIVE_LANGS.map(l => '<option value="' + l.code + '"' + (l.code === curNative() ? ' selected' : '') + '>' + l.label + '</option>').join('');
+  const targetOpts = TARGET_LANGS.map(l => '<option value="' + l.code + '"' + (l.code === curTarget() ? ' selected' : '') + '>' + l.flag + ' ' + esc(l.name[uiLang] || l.name.en) + '</option>').join('');
+  const badgeEl = function(b){
+    return ''
+    + '<div class="flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center ' + (b.ok ? 'border-brand-500/30 bg-brand-500/10' : 'border-white/10 bg-slate-900/40 opacity-50') + '">'
+    +   '<i class="fa-solid ' + b.icon + ' text-xl ' + (b.ok ? 'text-brand-300' : 'text-slate-500') + '"></i>'
+    +   '<span class="text-xs font-semibold">' + esc(badgeText(b.id,'n')) + '</span>'
+    +   '<span class="text-[10px] leading-tight text-slate-400">' + esc(badgeText(b.id,'d')) + '</span></div>';
+  };
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   '<div class="flex items-center gap-4 rounded-3xl border border-white/10 bg-slate-900/60 p-5">'
+  +     '<span class="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-cyan-500 text-2xl font-extrabold text-white">' + esc((meta.name || 'E').charAt(0).toUpperCase()) + '</span>'
+  +     '<div><p class="text-xl font-extrabold">' + esc(meta.name || 'Estudiante') + '</p>'
+  +       '<p class="text-sm text-slate-400">' + esc((NATIVE_LANGS.find(l=>l.code===curNative())||{label:'Español'}).label) + ' → ' + targetLang(curTarget()).flag + ' ' + esc(targetName(curTarget())) + '</p></div>'
+  +   '</div>'
+  +   '<div class="mt-4 grid grid-cols-2 gap-3">'
+  +     '<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4"><p class="text-xs text-slate-400">' + esc(t('xp')) + '</p><p class="text-2xl font-extrabold text-brand-300">' + state.xp + ' XP</p></div>'
+  +     '<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4"><p class="text-xs text-slate-400">' + esc(t('streak')) + '</p><p class="text-2xl font-extrabold text-amber-400">' + state.streak + ' <span class="text-sm">' + esc(t('days')) + '</span></p></div>'
+  +   '</div>'
+  +   '<h3 class="mb-3 mt-8 text-sm font-semibold uppercase tracking-wider text-slate-400">' + esc(t('changeLangs')) + '</h3>'
+  +   '<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">'
+  +     '<div><label class="mb-1 block text-xs font-medium text-slate-400">' + esc(t('nativeLabel')) + '</label>'
+  +       '<select data-change="native" class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-brand-500">' + nativeOpts + '</select></div>'
+  +     '<div><label class="mb-1 block text-xs font-medium text-slate-400">' + esc(t('targetLabel')) + '</label>'
+  +       '<select data-change="target" class="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-brand-500">' + targetOpts + '</select></div>'
+  +   '</div>'
+  +   '<h3 class="mb-3 mt-8 text-sm font-semibold uppercase tracking-wider text-slate-400">' + esc(t('achievements')) + '</h3>'
+  +   '<div class="grid grid-cols-3 gap-3 sm:grid-cols-4">' + badgeDefs().map(badgeEl).join('') + '</div>'
+  +   '<h3 class="mb-3 mt-8 text-sm font-semibold uppercase tracking-wider text-slate-400">' + esc(t('settings')) + '</h3>'
+  +   '<div class="space-y-2">'
+  +     '<div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3"><span class="text-sm text-slate-400">' + esc(t('completedLessons')) + '</span><span class="text-sm font-semibold">' + o.done + ' / ' + o.total + '</span></div>'
+  +     '<div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3"><span class="text-sm text-slate-400">' + esc(t('totalProgress')) + '</span><span class="text-sm font-semibold">' + o.pct + '%</span></div>'
+  +     '<div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3"><span class="text-sm text-slate-400">' + esc(t('voiceSpeed')) + '</span>'
+  +       '<button data-action="toggle-speed" class="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-sm font-semibold">' + (state.settings.rate >= 1 ? esc(t('speedNormal')) : esc(t('speedSlow'))) + '</button></div>'
+  +   '</div>'
+  +   '<button data-action="reset" class="mt-6 w-full rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 font-semibold text-rose-300 transition hover:bg-rose-500/20"><i class="fa-solid fa-trash-can mr-1"></i> ' + esc(t('resetProgress')) + '</button>'
+  +   '<p class="mt-4 text-center text-xs text-slate-500">DuckQuest · localStorage</p>'
+  + '</section>';
+}
+
+/* ============================================================
+   10. RENDER
+   ============================================================ */
+function render(){
+  const app = document.getElementById('app');
+  if (!state.profile){ app.innerHTML = setupScreen(); return; }
+  let content;
+  if (screen.name === 'path') content = pathScreen();
+  else if (screen.name === 'profile') content = profileScreen();
+  else if (screen.name === 'lesson') content = lessonScreen();
+  else content = homeScreen();
+  const isLesson = screen.name === 'lesson';
+  app.innerHTML = header() + '<main class="mx-auto max-w-4xl px-4 pt-6 ' + (isLesson ? 'pb-10' : 'pb-28') + '">' + content + '</main>' + (isLesson ? '' : bottomNav());
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ============================================================
+   11. ACCIONES
+   ============================================================ */
+function startLesson(level, kind){
+  player = {
+    level: level, kind: kind, i: 0, revealed: false, answered: false,
+    chosen: null, correct: 0, xpEarned: 0, done: false,
+    cards: kind === 'v' ? buildCards(level) : null,
+    questions: kind === 'q' ? buildQuestions(level) : null
+  };
+  screen = { name:'lesson' };
+  render();
+}
+function finishLesson(){
+  const key = lessonKey(player.level, player.kind);
+  const firstTime = !state.completed[key];
+  let xp;
+  if (player.kind === 'q') xp = 10 + player.correct * 4; else xp = 15;
+  if (firstTime){
+    player.xpEarned = xp;
+    state.completed[key] = true;
+    state.xp += xp;
+    touchStreak();
+  } else {
+    player.xpEarned = 5;
+    state.xp += 5;
+  }
+  player.done = true;
+  save();
+  render();
+  toast('+' + player.xpEarned + ' XP · ' + t(firstTime ? 'wellDone' : 'review'), 'fa-bolt');
+}
+function advance(){
+  player.i++;
+  player.revealed = false;
+  player.answered = false;
+  player.chosen = null;
+  const len = player.kind === 'v' ? player.cards.length : player.questions.length;
+  if (player.i >= len) finishLesson();
+  else render();
+}
+
+document.addEventListener('click', function(e){
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const a = el.dataset.action;
+
+  if (a === 'start'){
+    const name = (document.getElementById('setupName').value || '').trim();
+    const native = document.getElementById('setupNative').value;
+    const target = document.getElementById('setupTarget').value;
+    state.profile = { name: name || 'Estudiante', native: native, target: target, createdAt: Date.now() };
+    uiLang = UI[native] ? native : 'es';
+    save();
+    screen = { name:'home' };
+    render();
+    toast(t('welcomeMsg'), 'fa-feather');
+  }
+  else if (a === 'nav-home'){ screen = { name:'home' }; render(); }
+  else if (a === 'nav-profile'){ screen = { name:'profile' }; render(); }
+  else if (a === 'nav-path'){ const n = findNextLesson(); screen = { name:'path', level: n ? n.level : 'A1' }; render(); }
+  else if (a === 'open-level'){ screen = { name:'path', level: el.dataset.level }; render(); }
+  else if (a === 'locked'){ toast(t('pathLocked'), 'fa-lock'); }
+  else if (a === 'resume'){ const n = findNextLesson(); if (n) startLesson(n.level, n.kind); }
+  else if (a === 'start-lesson'){ startLesson(screen.level || 'A1', el.dataset.kind); }
+  else if (a === 'exit-lesson'){ screen = { name:'path', level: player.level }; render(); }
+  else if (a === 'speak'){ speak(el.dataset.text, targetLang(curTarget()).tts); }
+  else if (a === 'reveal'){ player.revealed = true; render(); }
+  else if (a === 'answer'){
+    if (player.answered) return;
+    const idx = parseInt(el.dataset.index, 10);
+    player.answered = true;
+    player.chosen = idx;
+    if (idx === player.questions[player.i].answer) player.correct++;
+    render();
+  }
+  else if (a === 'next'){ advance(); }
+  else if (a === 'retry'){ startLesson(player.level, player.kind); }
+  else if (a === 'back-path'){ screen = { name:'path', level: player.level }; render(); }
+  else if (a === 'toggle-speed'){ state.settings.rate = state.settings.rate >= 1 ? 0.8 : 1.1; save(); render(); }
+  else if (a === 'reset'){
+    if (confirm(t('resetConfirm'))){
+      localStorage.removeItem(STORE_KEY);
+      const keepLang = uiLang;
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      uiLang = keepLang;
+      screen = { name:'home' };
+      render();
+      toast(t('resetProgress'), 'fa-trash-can');
+    }
+  }
+});
+
+document.addEventListener('change', function(e){
+  const el = e.target.closest('[data-change]');
+  if (!el) return;
+  const what = el.dataset.change;
+  if (!state.profile) return;
+  if (what === 'native'){
+    state.profile.native = el.value;
+    uiLang = UI[el.value] ? el.value : 'es';
+    save(); render();
+  } else if (what === 'target'){
+    state.profile.target = el.value;
+    save(); render();
+  }
+});
+
+document.getElementById('app').addEventListener('change', function(e){
+  if (!state.profile && e.target && e.target.id === 'setupNative'){
+    setupDraft.name = document.getElementById('setupName').value;
+    setupDraft.target = document.getElementById('setupTarget').value;
+    setupDraft.native = e.target.value;
+    uiLang = UI[e.target.value] ? e.target.value : 'es';
+    render();
+  }
+  if (!state.profile && e.target && e.target.id === 'setupTarget'){
+    setupDraft.name = document.getElementById('setupName').value;
+    setupDraft.native = document.getElementById('setupNative').value;
+    setupDraft.target = e.target.value;
+    render();
+  }
+});
+
+/* ============================================================
+   12. BOOT
+   ============================================================ */
+load();
+render();
+</script>
+</body>
+</html>
