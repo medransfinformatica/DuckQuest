@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DuckQuest — Aprende idiomas por niveles MCER (A1–C2)</title>
-<meta name="description" content="DuckQuest: plataforma interactiva para aprender idiomas por niveles MCER (A1-C2). Pronunciación, XP, racha y progreso local.">
+<title>DuckQuest — 90 lecciones de idiomas por niveles MCER (A1–C2)</title>
+<meta name="description" content="DuckQuest: curso interactivo de idiomas con 18 unidades y 90 lecciones por niveles MCER (A1-C2). Vocabulario, expresión oral, escritura, dictado, XP, racha y progreso local.">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,6 +38,20 @@ tailwind.config = {
   .animate-toast { animation: toastIn .25s ease both; }
   .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,.15) 1px, transparent 0); background-size: 22px 22px; }
   .cjk { font-family: 'Noto Sans CJK JP','Noto Sans SC','Noto Sans KR','Malgun Gothic','Microsoft YaHei','Yu Gothic',Inter,sans-serif; }
+  @keyframes micGlow {
+    0% { box-shadow: 0 0 0 0 rgba(244,63,94,.55), 0 0 0 0 rgba(244,63,94,.25); }
+    70% { box-shadow: 0 0 0 16px rgba(244,63,94,0), 0 0 0 30px rgba(244,63,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(244,63,94,0), 0 0 0 0 rgba(244,63,94,0); }
+  }
+  .mic-live { animation: micGlow 1.5s ease-out infinite; }
+  @keyframes waveBar { 0%,100% { height:6px; opacity:.55; } 50% { height:22px; opacity:1; } }
+  .wave-bar { width:4px; border-radius:999px; background:currentColor; animation: waveBar .9s ease-in-out infinite; }
+  .wave-bar:nth-child(2){ animation-delay:.12s; }
+  .wave-bar:nth-child(3){ animation-delay:.24s; }
+  .wave-bar:nth-child(4){ animation-delay:.36s; }
+  .wave-bar:nth-child(5){ animation-delay:.48s; }
+  @keyframes micFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
+  .mic-float { animation: micFloat 2.2s ease-in-out infinite; }
 </style>
 </head>
 <body class="h-full bg-slate-950 text-slate-100 font-sans antialiased">
@@ -57,32 +71,355 @@ const STORE_KEY = 'duckquest_state';
    1. DATOS LINGÜÍSTICOS
    ============================================================ */
 
-/* 36 conceptos, agrupados en 6 unidades (una por nivel MCER) */
+/* 180 conceptos, agrupados en 18 unidades (tres por nivel MCER) */
 const GLOSS = {
-  es: ['hola','buenos días','buenas noches','gracias','por favor','adiós','uno','dos','tres','rojo','azul','verde','madre','padre','hermano','hermana','amigo','familia','agua','pan','café','té','leche','manzana','lunes','hoy','mañana','ayer','mañana (temprano)','noche','disculpe','¿dónde está?','¿cuánto cuesta?','no entiendo','lo siento','bienvenido'],
-  en: ['hello','good morning','good night','thank you','please','goodbye','one','two','three','red','blue','green','mother','father','brother','sister','friend','family','water','bread','coffee','tea','milk','apple','Monday','today','tomorrow','yesterday','morning','night','excuse me','where is it?','how much?',"I don't understand",'sorry','welcome'],
-  pt: ['olá','bom dia','boa noite','obrigado','por favor','adeus','um','dois','três','vermelho','azul','verde','mãe','pai','irmão','irmã','amigo','família','água','pão','café','chá','leite','maçã','segunda-feira','hoje','amanhã','ontem','manhã','noite','com licença','onde está?','quanto custa?','não entendo','desculpe','bem-vindo'],
-  fr: ['bonjour','bonjour','bonne nuit','merci',"s'il vous plaît",'au revoir','un','deux','trois','rouge','bleu','vert','mère','père','frère','sœur','ami','famille','eau','pain','café','thé','lait','pomme','lundi',"aujourd'hui",'demain','hier','matin','nuit','excusez-moi','où est-ce ?','combien ?','je ne comprends pas','désolé','bienvenue']
+  es: [
+    "hola", "buenos días", "buenas noches", "gracias", "por favor", "adiós", "sí", "no", "buenas tardes", "mucho gusto", 
+    "uno", "dos", "tres", "cuatro", "cinco", "rojo", "azul", "verde", "amarillo", "negro", 
+    "lunes", "hoy", "mañana", "ayer", "mañana (temprano)", "noche", "martes", "miércoles", "semana", "hora", 
+    "madre", "padre", "hermano", "hermana", "amigo", "familia", "hijo", "hija", "abuelo", "abuela", 
+    "agua", "pan", "café", "té", "leche", "manzana", "arroz", "pollo", "pescado", "naranja", 
+    "casa", "habitación", "puerta", "ventana", "mesa", "silla", "cama", "llave", "libro", "teléfono", 
+    "ciudad", "calle", "estación", "autobús", "tren", "coche", "aeropuerto", "billete", "mapa", "dirección", 
+    "dinero", "precio", "tienda", "mercado", "tarjeta", "efectivo", "barato", "caro", "talla", "recibo", 
+    "viaje", "hotel", "reserva", "pasaporte", "equipaje", "playa", "montaña", "vuelo", "guía", "recuerdo", 
+    "trabajo", "oficina", "reunión", "jefe", "salario", "entrevista", "universidad", "estudiante", "examen", "carrera", 
+    "salud", "médico", "hospital", "medicina", "dolor", "cabeza", "estómago", "fiebre", "farmacia", "emergencia", 
+    "naturaleza", "árbol", "río", "mar", "cielo", "tiempo", "clima", "contaminación", "reciclaje", "energía", 
+    "sociedad", "gobierno", "elecciones", "ley", "justicia", "comunidad", "pobreza", "igualdad", "inmigración", "ciudadano", 
+    "tecnología", "internet", "pantalla", "contraseña", "software", "datos", "redes sociales", "publicidad", "privacidad", "inteligencia artificial", 
+    "opinión", "argumento", "evidencia", "ventaja", "desventaja", "sin embargo", "por lo tanto", "no obstante", "en mi opinión", "punto de vista", 
+    "acuerdo", "propuesta", "fecha límite", "presupuesto", "factura", "cliente", "negociación", "responsabilidad", "departamento", "contrato", 
+    "romper el hielo", "pan comido", "cada muerte de obispo", "dar en el clavo", "mejor tarde que nunca", "costar un ojo de la cara", "estar pendiente de", "tomárselo con calma", "en resumen", "cuando las ranas críen pelo", 
+    "disculpe", "¿dónde está?", "¿cuánto cuesta?", "no entiendo", "lo siento", "bienvenido", "¿puede repetir?", "¿habla inglés?", "buena suerte", "hasta luego"
+  ],
+  en: [
+    "Hello", "Good morning", "Good night", "Thank you", "Please", "Goodbye", "Yes", "No", "Good afternoon", "Nice to meet you", 
+    "One", "Two", "Three", "Four", "Five", "Red", "Blue", "Green", "Yellow", "Black", 
+    "Monday", "Today", "Tomorrow", "Yesterday", "Morning", "Night", "Tuesday", "Wednesday", "Week", "Hour", 
+    "Mother", "Father", "Brother", "Sister", "Friend", "Family", "Son", "Daughter", "Grandfather", "Grandmother", 
+    "Water", "Bread", "Coffee", "Tea", "Milk", "Apple", "Rice", "Chicken", "Fish", "Orange", 
+    "house", "room", "door", "window", "table", "chair", "bed", "key", "book", "phone", 
+    "city", "street", "station", "bus", "train", "car", "airport", "ticket", "map", "address", 
+    "money", "price", "shop", "market", "card", "cash", "cheap", "expensive", "size", "receipt", 
+    "trip", "hotel", "reservation", "passport", "luggage", "beach", "mountain", "flight", "guide", "souvenir", 
+    "work", "office", "meeting", "boss", "salary", "interview", "university", "student", "exam", "career", 
+    "health", "doctor", "hospital", "medicine", "pain", "head", "stomach", "fever", "pharmacy", "emergency", 
+    "nature", "tree", "river", "sea", "sky", "weather", "climate", "pollution", "recycling", "energy", 
+    "society", "government", "election", "law", "justice", "community", "poverty", "equality", "immigration", "citizen", 
+    "technology", "internet", "screen", "password", "software", "data", "social media", "advertising", "privacy", "artificial intelligence", 
+    "opinion", "argument", "evidence", "advantage", "disadvantage", "however", "therefore", "nevertheless", "in my opinion", "point of view", 
+    "agreement", "proposal", "deadline", "budget", "invoice", "client", "negotiation", "responsibility", "department", "contract", 
+    "break the ice", "piece of cake", "once in a blue moon", "hit the nail on the head", "better late than never", "cost an arm and a leg", "keep an eye on", "take it easy", "make a long story short", "when pigs fly", 
+    "Excuse me", "Where is it?", "How much?", "I don't understand", "Sorry", "Welcome", "Can you repeat?", "Do you speak English?", "Good luck", "See you later"
+  ],
+  pt: [
+    "olá", "bom dia", "boa noite", "obrigado", "por favor", "adeus", "sim", "não", "boa tarde", "prazer em conhecer", 
+    "um", "dois", "três", "quatro", "cinco", "vermelho", "azul", "verde", "amarelo", "preto", 
+    "segunda-feira", "hoje", "amanhã", "ontem", "manhã", "noite", "terça-feira", "quarta-feira", "semana", "hora", 
+    "mãe", "pai", "irmão", "irmã", "amigo", "família", "filho", "filha", "avô", "avó", 
+    "água", "pão", "café", "chá", "leite", "maçã", "arroz", "frango", "peixe", "laranja", 
+    "casa", "quarto", "porta", "janela", "mesa", "cadeira", "cama", "chave", "livro", "telefone", 
+    "cidade", "rua", "estação", "ônibus", "trem", "carro", "aeroporto", "bilhete", "mapa", "endereço", 
+    "dinheiro", "preço", "loja", "mercado", "cartão", "dinheiro vivo", "barato", "caro", "tamanho", "recibo", 
+    "viagem", "hotel", "reserva", "passaporte", "bagagem", "praia", "montanha", "voo", "guia", "lembrança", 
+    "trabalho", "escritório", "reunião", "chefe", "salário", "entrevista", "universidade", "estudante", "exame", "carreira", 
+    "saúde", "médico", "hospital", "remédio", "dor", "cabeça", "estômago", "febre", "farmácia", "emergência", 
+    "natureza", "árvore", "rio", "mar", "céu", "tempo", "clima", "poluição", "reciclagem", "energia", 
+    "sociedade", "governo", "eleição", "lei", "justiça", "comunidade", "pobreza", "igualdade", "imigração", "cidadão", 
+    "tecnologia", "internet", "tela", "senha", "software", "dados", "redes sociais", "publicidade", "privacidade", "inteligência artificial", 
+    "opinião", "argumento", "evidência", "vantagem", "desvantagem", "no entanto", "portanto", "mesmo assim", "na minha opinião", "ponto de vista", 
+    "acordo", "proposta", "prazo", "orçamento", "fatura", "cliente", "negociação", "responsabilidade", "departamento", "contrato", 
+    "quebrar o gelo", "moleza", "uma vez na vida", "acertar na mosca", "antes tarde do que nunca", "custar os olhos da cara", "ficar de olho em", "pegar leve", "resumindo", "quando as galinhas criarem dentes", 
+    "com licença", "onde está?", "quanto custa?", "não entendo", "desculpe", "bem-vindo", "pode repetir?", "você fala inglês?", "boa sorte", "até logo"
+  ],
+  fr: [
+    "bonjour", "bonjour", "bonne nuit", "merci", "s'il vous plaît", "au revoir", "oui", "non", "bon après-midi", "enchanté", 
+    "un", "deux", "trois", "quatre", "cinq", "rouge", "bleu", "vert", "jaune", "noir", 
+    "lundi", "aujourd'hui", "demain", "hier", "matin", "nuit", "mardi", "mercredi", "semaine", "heure", 
+    "mère", "père", "frère", "sœur", "ami", "famille", "fils", "fille", "grand-père", "grand-mère", 
+    "eau", "pain", "café", "thé", "lait", "pomme", "riz", "poulet", "poisson", "orange", 
+    "maison", "chambre", "porte", "fenêtre", "table", "chaise", "lit", "clé", "livre", "téléphone", 
+    "ville", "rue", "gare", "bus", "train", "voiture", "aéroport", "billet", "carte", "adresse", 
+    "argent", "prix", "magasin", "marché", "carte", "espèces", "bon marché", "cher", "taille", "reçu", 
+    "voyage", "hôtel", "réservation", "passeport", "bagages", "plage", "montagne", "vol", "guide", "souvenir", 
+    "travail", "bureau", "réunion", "patron", "salaire", "entretien", "université", "étudiant", "examen", "carrière", 
+    "santé", "médecin", "hôpital", "médicament", "douleur", "tête", "estomac", "fièvre", "pharmacie", "urgence", 
+    "nature", "arbre", "rivière", "mer", "ciel", "météo", "climat", "pollution", "recyclage", "énergie", 
+    "société", "gouvernement", "élection", "loi", "justice", "communauté", "pauvreté", "égalité", "immigration", "citoyen", 
+    "technologie", "internet", "écran", "mot de passe", "logiciel", "données", "réseaux sociaux", "publicité", "vie privée", "intelligence artificielle", 
+    "opinion", "argument", "preuve", "avantage", "inconvénient", "cependant", "donc", "néanmoins", "à mon avis", "point de vue", 
+    "accord", "proposition", "délai", "budget", "facture", "client", "négociation", "responsabilité", "service", "contrat", 
+    "briser la glace", "un jeu d'enfant", "tous les trente-six du mois", "mettre dans le mille", "mieux vaut tard que jamais", "coûter les yeux de la tête", "surveiller", "prendre les choses calmement", "en bref", "quand les poules auront des dents", 
+    "excusez-moi", "où est-ce ?", "combien ?", "je ne comprends pas", "désolé", "bienvenue", "pouvez-vous répéter ?", "parlez-vous anglais ?", "bonne chance", "à plus tard"
+  ]
 };
 
 const LEX = {
-  en: ['Hello','Good morning','Good night','Thank you','Please','Goodbye','One','Two','Three','Red','Blue','Green','Mother','Father','Brother','Sister','Friend','Family','Water','Bread','Coffee','Tea','Milk','Apple','Monday','Today','Tomorrow','Yesterday','Morning','Night','Excuse me','Where is it?','How much?',"I don't understand",'Sorry','Welcome'],
-  fr: ['Bonjour','Bonjour','Bonne nuit','Merci',"S'il vous plaît",'Au revoir','Un','Deux','Trois','Rouge','Bleu','Vert','Mère','Père','Frère','Sœur','Ami','Famille','Eau','Pain','Café','Thé','Lait','Pomme','Lundi',"Aujourd'hui",'Demain','Hier','Matin','Nuit','Excusez-moi','Où est-ce ?','Combien ?','Je ne comprends pas','Désolé','Bienvenue'],
-  de: ['Hallo','Guten Morgen','Gute Nacht','Danke','Bitte','Auf Wiedersehen','Eins','Zwei','Drei','Rot','Blau','Grün','Mutter','Vater','Bruder','Schwester','Freund','Familie','Wasser','Brot','Kaffee','Tee','Milch','Apfel','Montag','Heute','Morgen','Gestern','Morgen','Nacht','Entschuldigung','Wo ist es?','Wie viel?','Ich verstehe nicht','Es tut mir leid','Willkommen'],
-  it: ['Ciao','Buongiorno','Buonanotte','Grazie','Per favore','Arrivederci','Uno','Due','Tre','Rosso','Blu','Verde','Madre','Padre','Fratello','Sorella','Amico','Famiglia','Acqua','Pane','Caffè','Tè','Latte','Mela','Lunedì','Oggi','Domani','Ieri','Mattina','Notte','Scusi',"Dov'è?",'Quanto costa?','Non capisco','Mi dispiace','Benvenuto'],
-  pt: ['Olá','Bom dia','Boa noite','Obrigado','Por favor','Adeus','Um','Dois','Três','Vermelho','Azul','Verde','Mãe','Pai','Irmão','Irmã','Amigo','Família','Água','Pão','Café','Chá','Leite','Maçã','Segunda-feira','Hoje','Amanhã','Ontem','Manhã','Noite','Com licença','Onde está?','Quanto custa?','Não entendo','Desculpe','Bem-vindo'],
-  ru: ['Привет','Доброе утро','Спокойной ночи','Спасибо','Пожалуйста','До свидания','Один','Два','Три','Красный','Синий','Зелёный','Мать','Отец','Брат','Сестра','Друг','Семья','Вода','Хлеб','Кофе','Чай','Молоко','Яблоко','Понедельник','Сегодня','Завтра','Вчера','Утро','Ночь','Извините','Где это?','Сколько стоит?','Я не понимаю','Простите','Добро пожаловать'],
-  zh: ['你好','早上好','晚安','谢谢','请','再见','一','二','三','红色','蓝色','绿色','妈妈','爸爸','哥哥','姐姐','朋友','家庭','水','面包','咖啡','茶','牛奶','苹果','星期一','今天','明天','昨天','早上','晚上','不好意思','在哪里？','多少钱？','我不懂','对不起','欢迎'],
-  ja: ['こんにちは','おはよう','おやすみ','ありがとう','お願いします','さようなら','一','二','三','赤','青','緑','母','父','兄','姉','友達','家族','水','パン','コーヒー','お茶','牛乳','りんご','月曜日','今日','明日','昨日','朝','夜','すみません','どこですか','いくらですか','わかりません','ごめんなさい','ようこそ'],
-  ko: ['안녕하세요','좋은 아침','안녕히 주무세요','감사합니다','주세요','안녕히 가세요','하나','둘','셋','빨강','파랑','초록','어머니','아버지','형','누나','친구','가족','물','빵','커피','차','우유','사과','월요일','오늘','내일','어제','아침','밤','실례합니다','어디예요?','얼마예요?','이해가 안 돼요','미안합니다','환영합니다']
+  en: [
+    "Hello", "Good morning", "Good night", "Thank you", "Please", "Goodbye", "Yes", "No", "Good afternoon", "Nice to meet you", 
+    "One", "Two", "Three", "Four", "Five", "Red", "Blue", "Green", "Yellow", "Black", 
+    "Monday", "Today", "Tomorrow", "Yesterday", "Morning", "Night", "Tuesday", "Wednesday", "Week", "Hour", 
+    "Mother", "Father", "Brother", "Sister", "Friend", "Family", "Son", "Daughter", "Grandfather", "Grandmother", 
+    "Water", "Bread", "Coffee", "Tea", "Milk", "Apple", "Rice", "Chicken", "Fish", "Orange", 
+    "House", "Room", "Door", "Window", "Table", "Chair", "Bed", "Key", "Book", "Phone", 
+    "City", "Street", "Station", "Bus", "Train", "Car", "Airport", "Ticket", "Map", "Address", 
+    "Money", "Price", "Shop", "Market", "Card", "Cash", "Cheap", "Expensive", "Size", "Receipt", 
+    "Trip", "Hotel", "Reservation", "Passport", "Luggage", "Beach", "Mountain", "Flight", "Guide", "Souvenir", 
+    "Work", "Office", "Meeting", "Boss", "Salary", "Interview", "University", "Student", "Exam", "Career", 
+    "Health", "Doctor", "Hospital", "Medicine", "Pain", "Head", "Stomach", "Fever", "Pharmacy", "Emergency", 
+    "Nature", "Tree", "River", "Sea", "Sky", "Weather", "Climate", "Pollution", "Recycling", "Energy", 
+    "Society", "Government", "Election", "Law", "Justice", "Community", "Poverty", "Equality", "Immigration", "Citizen", 
+    "Technology", "Internet", "Screen", "Password", "Software", "Data", "Social media", "Advertising", "Privacy", "Artificial intelligence", 
+    "Opinion", "Argument", "Evidence", "Advantage", "Disadvantage", "However", "Therefore", "Nevertheless", "In my opinion", "Point of view", 
+    "Agreement", "Proposal", "Deadline", "Budget", "Invoice", "Client", "Negotiation", "Responsibility", "Department", "Contract", 
+    "Break the ice", "Piece of cake", "Once in a blue moon", "Hit the nail on the head", "Better late than never", "Cost an arm and a leg", "Keep an eye on", "Take it easy", "Make a long story short", "When pigs fly", 
+    "Excuse me", "Where is it?", "How much?", "I don't understand", "Sorry", "Welcome", "Can you repeat?", "Do you speak English?", "Good luck", "See you later"
+  ],
+  fr: [
+    "Salut", "Bonjour", "Bonne nuit", "Merci", "S'il vous plaît", "Au revoir", "Oui", "Non", "Bon après-midi", "Enchanté", 
+    "Un", "Deux", "Trois", "Quatre", "Cinq", "Rouge", "Bleu", "Vert", "Jaune", "Noir", 
+    "Lundi", "Aujourd'hui", "Demain", "Hier", "Matin", "Nuit", "Mardi", "Mercredi", "Semaine", "Heure", 
+    "Mère", "Père", "Frère", "Sœur", "Ami", "Famille", "Fils", "Fille", "Grand-père", "Grand-mère", 
+    "Eau", "Pain", "Café", "Thé", "Lait", "Pomme", "Riz", "Poulet", "Poisson", "Orange", 
+    "Maison", "Chambre", "Porte", "Fenêtre", "Table", "Chaise", "Lit", "Clé", "Livre", "Téléphone", 
+    "Ville", "Rue", "Gare", "Bus", "Train", "Voiture", "Aéroport", "Billet", "Carte", "Adresse", 
+    "Argent", "Prix", "Magasin", "Marché", "Carte", "Espèces", "Bon marché", "Cher", "Taille", "Reçu", 
+    "Voyage", "Hôtel", "Réservation", "Passeport", "Bagages", "Plage", "Montagne", "Vol", "Guide", "Souvenir", 
+    "Travail", "Bureau", "Réunion", "Patron", "Salaire", "Entretien", "Université", "Étudiant", "Examen", "Carrière", 
+    "Santé", "Médecin", "Hôpital", "Médicament", "Douleur", "Tête", "Estomac", "Fièvre", "Pharmacie", "Urgence", 
+    "Nature", "Arbre", "Rivière", "Mer", "Ciel", "Météo", "Climat", "Pollution", "Recyclage", "Énergie", 
+    "Société", "Gouvernement", "Élection", "Loi", "Justice", "Communauté", "Pauvreté", "Égalité", "Immigration", "Citoyen", 
+    "Technologie", "Internet", "Écran", "Mot de passe", "Logiciel", "Données", "Réseaux sociaux", "Publicité", "Vie privée", "Intelligence artificielle", 
+    "Opinion", "Argument", "Preuve", "Avantage", "Inconvénient", "Cependant", "Donc", "Néanmoins", "À mon avis", "Point de vue", 
+    "Accord", "Proposition", "Délai", "Budget", "Facture", "Client", "Négociation", "Responsabilité", "Service", "Contrat", 
+    "Briser la glace", "Un jeu d'enfant", "Tous les trente-six du mois", "Mettre dans le mille", "Mieux vaut tard que jamais", "Coûter les yeux de la tête", "Surveiller", "Prendre les choses calmement", "En bref", "Quand les poules auront des dents", 
+    "Excusez-moi", "Où est-ce ?", "Combien ?", "Je ne comprends pas", "Désolé", "Bienvenue", "Pouvez-vous répéter ?", "Parlez-vous anglais ?", "Bonne chance", "À plus tard"
+  ],
+  de: [
+    "Hallo", "Guten Morgen", "Gute Nacht", "Danke", "Bitte", "Auf Wiedersehen", "Ja", "Nein", "Guten Tag", "Freut mich", 
+    "Eins", "Zwei", "Drei", "Vier", "Fünf", "Rot", "Blau", "Grün", "Gelb", "Schwarz", 
+    "Montag", "Heute", "Morgen", "Gestern", "Früher Morgen", "Nacht", "Dienstag", "Mittwoch", "Woche", "Stunde", 
+    "Mutter", "Vater", "Bruder", "Schwester", "Freund", "Familie", "Sohn", "Tochter", "Großvater", "Großmutter", 
+    "Wasser", "Brot", "Kaffee", "Tee", "Milch", "Apfel", "Reis", "Hähnchen", "Fisch", "Orange", 
+    "Haus", "Zimmer", "Tür", "Fenster", "Tisch", "Stuhl", "Bett", "Schlüssel", "Buch", "Telefon", 
+    "Stadt", "Straße", "Bahnhof", "Bus", "Zug", "Auto", "Flughafen", "Fahrkarte", "Karte", "Adresse", 
+    "Geld", "Preis", "Geschäft", "Markt", "Karte", "Bargeld", "Billig", "Teuer", "Größe", "Quittung", 
+    "Reise", "Hotel", "Reservierung", "Reisepass", "Gepäck", "Strand", "Berg", "Flug", "Reiseführer", "Souvenir", 
+    "Arbeit", "Büro", "Besprechung", "Chef", "Gehalt", "Vorstellungsgespräch", "Universität", "Student", "Prüfung", "Karriere", 
+    "Gesundheit", "Arzt", "Krankenhaus", "Medikament", "Schmerz", "Kopf", "Magen", "Fieber", "Apotheke", "Notfall", 
+    "Natur", "Baum", "Fluss", "Meer", "Himmel", "Wetter", "Klima", "Umweltverschmutzung", "Recycling", "Energie", 
+    "Gesellschaft", "Regierung", "Wahl", "Gesetz", "Gerechtigkeit", "Gemeinschaft", "Armut", "Gleichheit", "Einwanderung", "Bürger", 
+    "Technologie", "Internet", "Bildschirm", "Passwort", "Software", "Daten", "Soziale Medien", "Werbung", "Privatsphäre", "Künstliche Intelligenz", 
+    "Meinung", "Argument", "Beweis", "Vorteil", "Nachteil", "Jedoch", "Daher", "Nichtsdestotrotz", "Meiner Meinung nach", "Standpunkt", 
+    "Vereinbarung", "Vorschlag", "Frist", "Budget", "Rechnung", "Kunde", "Verhandlung", "Verantwortung", "Abteilung", "Vertrag", 
+    "Das Eis brechen", "Ein Kinderspiel", "Alle Jubeljahre", "Den Nagel auf den Kopf treffen", "Besser spät als nie", "Ein Vermögen kosten", "Ein Auge auf etwas werfen", "Sich entspannen", "Kurz gesagt", "Wenn Schweine fliegen", 
+    "Entschuldigung", "Wo ist es?", "Wie viel?", "Ich verstehe nicht", "Es tut mir leid", "Willkommen", "Können Sie das wiederholen?", "Sprechen Sie Englisch?", "Viel Glück", "Bis später"
+  ],
+  it: [
+    "Ciao", "Buongiorno", "Buonanotte", "Grazie", "Per favore", "Arrivederci", "Sì", "No", "Buon pomeriggio", "Piacere", 
+    "Uno", "Due", "Tre", "Quattro", "Cinque", "Rosso", "Blu", "Verde", "Giallo", "Nero", 
+    "Lunedì", "Oggi", "Domani", "Ieri", "Mattina", "Notte", "Martedì", "Mercoledì", "Settimana", "Ora", 
+    "Madre", "Padre", "Fratello", "Sorella", "Amico", "Famiglia", "Figlio", "Figlia", "Nonno", "Nonna", 
+    "Acqua", "Pane", "Caffè", "Tè", "Latte", "Mela", "Riso", "Pollo", "Pesce", "Arancia", 
+    "Casa", "Stanza", "Porta", "Finestra", "Tavolo", "Sedia", "Letto", "Chiave", "Libro", "Telefono", 
+    "Città", "Strada", "Stazione", "Autobus", "Treno", "Auto", "Aeroporto", "Biglietto", "Mappa", "Indirizzo", 
+    "Denaro", "Prezzo", "Negozio", "Mercato", "Carta", "Contanti", "Economico", "Costoso", "Taglia", "Ricevuta", 
+    "Viaggio", "Albergo", "Prenotazione", "Passaporto", "Bagaglio", "Spiaggia", "Montagna", "Volo", "Guida", "Souvenir", 
+    "Lavoro", "Ufficio", "Riunione", "Capo", "Stipendio", "Colloquio", "Università", "Studente", "Esame", "Carriera", 
+    "Salute", "Medico", "Ospedale", "Medicina", "Dolore", "Testa", "Stomaco", "Febbre", "Farmacia", "Emergenza", 
+    "Natura", "Albero", "Fiume", "Mare", "Cielo", "Tempo", "Clima", "Inquinamento", "Riciclaggio", "Energia", 
+    "Società", "Governo", "Elezione", "Legge", "Giustizia", "Comunità", "Povertà", "Uguaglianza", "Immigrazione", "Cittadino", 
+    "Tecnologia", "Internet", "Schermo", "Password", "Software", "Dati", "Social media", "Pubblicità", "Privacy", "Intelligenza artificiale", 
+    "Opinione", "Argomento", "Prova", "Vantaggio", "Svantaggio", "Tuttavia", "Quindi", "Ciononostante", "Secondo me", "Punto di vista", 
+    "Accordo", "Proposta", "Scadenza", "Budget", "Fattura", "Cliente", "Negoziazione", "Responsabilità", "Reparto", "Contratto", 
+    "Rompere il ghiaccio", "Un gioco da ragazzi", "Ogni morte di papa", "Cogliere nel segno", "Meglio tardi che mai", "Costare un occhio della testa", "Tenere d'occhio", "Prendersela comoda", "Per farla breve", "Quando i maiali voleranno", 
+    "Scusi", "Dov'è?", "Quanto costa?", "Non capisco", "Mi dispiace", "Benvenuto", "Può ripetere?", "Parla inglese?", "Buona fortuna", "A dopo"
+  ],
+  pt: [
+    "Olá", "Bom dia", "Boa noite", "Obrigado", "Por favor", "Adeus", "Sim", "Não", "Boa tarde", "Prazer em conhecer", 
+    "Um", "Dois", "Três", "Quatro", "Cinco", "Vermelho", "Azul", "Verde", "Amarelo", "Preto", 
+    "Segunda-feira", "Hoje", "Amanhã", "Ontem", "Manhã", "Noite", "Terça-feira", "Quarta-feira", "Semana", "Hora", 
+    "Mãe", "Pai", "Irmão", "Irmã", "Amigo", "Família", "Filho", "Filha", "Avô", "Avó", 
+    "Água", "Pão", "Café", "Chá", "Leite", "Maçã", "Arroz", "Frango", "Peixe", "Laranja", 
+    "Casa", "Quarto", "Porta", "Janela", "Mesa", "Cadeira", "Cama", "Chave", "Livro", "Telefone", 
+    "Cidade", "Rua", "Estação", "Ônibus", "Trem", "Carro", "Aeroporto", "Bilhete", "Mapa", "Endereço", 
+    "Dinheiro", "Preço", "Loja", "Mercado", "Cartão", "Dinheiro vivo", "Barato", "Caro", "Tamanho", "Recibo", 
+    "Viagem", "Hotel", "Reserva", "Passaporte", "Bagagem", "Praia", "Montanha", "Voo", "Guia", "Lembrança", 
+    "Trabalho", "Escritório", "Reunião", "Chefe", "Salário", "Entrevista", "Universidade", "Estudante", "Exame", "Carreira", 
+    "Saúde", "Médico", "Hospital", "Remédio", "Dor", "Cabeça", "Estômago", "Febre", "Farmácia", "Emergência", 
+    "Natureza", "Árvore", "Rio", "Mar", "Céu", "Tempo", "Clima", "Poluição", "Reciclagem", "Energia", 
+    "Sociedade", "Governo", "Eleição", "Lei", "Justiça", "Comunidade", "Pobreza", "Igualdade", "Imigração", "Cidadão", 
+    "Tecnologia", "Internet", "Tela", "Senha", "Software", "Dados", "Redes sociais", "Publicidade", "Privacidade", "Inteligência artificial", 
+    "Opinião", "Argumento", "Evidência", "Vantagem", "Desvantagem", "No entanto", "Portanto", "Mesmo assim", "Na minha opinião", "Ponto de vista", 
+    "Acordo", "Proposta", "Prazo", "Orçamento", "Fatura", "Cliente", "Negociação", "Responsabilidade", "Departamento", "Contrato", 
+    "Quebrar o gelo", "Moleza", "Uma vez na vida", "Acertar na mosca", "Antes tarde do que nunca", "Custar os olhos da cara", "Ficar de olho em", "Pegar leve", "Resumindo", "Quando as galinhas criarem dentes", 
+    "Com licença", "Onde está?", "Quanto custa?", "Não entendo", "Desculpe", "Bem-vindo", "Pode repetir?", "Você fala inglês?", "Boa sorte", "Até logo"
+  ],
+  ru: [
+    "Привет", "Доброе утро", "Спокойной ночи", "Спасибо", "Пожалуйста", "До свидания", "Да", "Нет", "Добрый день", "Приятно познакомиться", 
+    "Один", "Два", "Три", "Четыре", "Пять", "Красный", "Синий", "Зелёный", "Жёлтый", "Чёрный", 
+    "Понедельник", "Сегодня", "Завтра", "Вчера", "Утро", "Ночь", "Вторник", "Среда", "Неделя", "Час", 
+    "Мать", "Отец", "Брат", "Сестра", "Друг", "Семья", "Сын", "Дочь", "Дедушка", "Бабушка", 
+    "Вода", "Хлеб", "Кофе", "Чай", "Молоко", "Яблоко", "Рис", "Курица", "Рыба", "Апельсин", 
+    "Дом", "Комната", "Дверь", "Окно", "Стол", "Стул", "Кровать", "Ключ", "Книга", "Телефон", 
+    "Город", "Улица", "Станция", "Автобус", "Поезд", "Машина", "Аэропорт", "Билет", "Карта", "Адрес", 
+    "Деньги", "Цена", "Магазин", "Рынок", "Карта", "Наличные", "Дешёвый", "Дорогой", "Размер", "Чек", 
+    "Поездка", "Отель", "Бронь", "Паспорт", "Багаж", "Пляж", "Гора", "Рейс", "Гид", "Сувенир", 
+    "Работа", "Офис", "Встреча", "Начальник", "Зарплата", "Собеседование", "Университет", "Студент", "Экзамен", "Карьера", 
+    "Здоровье", "Врач", "Больница", "Лекарство", "Боль", "Голова", "Живот", "Температура", "Аптека", "Чрезвычайная ситуация", 
+    "Природа", "Дерево", "Река", "Море", "Небо", "Погода", "Климат", "Загрязнение", "Переработка", "Энергия", 
+    "Общество", "Правительство", "Выборы", "Закон", "Справедливость", "Сообщество", "Бедность", "Равенство", "Иммиграция", "Гражданин", 
+    "Технология", "Интернет", "Экран", "Пароль", "Программное обеспечение", "Данные", "Социальные сети", "Реклама", "Конфиденциальность", "Искусственный интеллект", 
+    "Мнение", "Аргумент", "Доказательство", "Преимущество", "Недостаток", "Однако", "Следовательно", "Тем не менее", "По моему мнению", "Точка зрения", 
+    "Соглашение", "Предложение", "Срок", "Бюджет", "Счёт", "Клиент", "Переговоры", "Ответственность", "Отдел", "Договор", 
+    "Растопить лёд", "Проще пареной репы", "Раз в сто лет", "Попасть в точку", "Лучше поздно, чем никогда", "Стоить очень дорого", "Следить за", "Не напрягаться", "Короче говоря", "Когда рак на горе свистнет", 
+    "Извините", "Где это?", "Сколько стоит?", "Я не понимаю", "Простите", "Добро пожаловать", "Можете повторить?", "Вы говорите по-английски?", "Удачи", "До скорого"
+  ],
+  zh: [
+    "你好", "早上好", "晚安", "谢谢", "请", "再见", "是", "不", "下午好", "很高兴认识你", 
+    "一", "二", "三", "四", "五", "红色", "蓝色", "绿色", "黄色", "黑色", 
+    "星期一", "今天", "明天", "昨天", "早上", "晚上", "星期二", "星期三", "星期", "小时", 
+    "妈妈", "爸爸", "哥哥", "姐姐", "朋友", "家庭", "儿子", "女儿", "爷爷", "奶奶", 
+    "水", "面包", "咖啡", "茶", "牛奶", "苹果", "米饭", "鸡肉", "鱼", "橙子", 
+    "房子", "房间", "门", "窗户", "桌子", "椅子", "床", "钥匙", "书", "电话", 
+    "城市", "街道", "车站", "公交车", "火车", "汽车", "机场", "车票", "地图", "地址", 
+    "钱", "价格", "商店", "市场", "卡", "现金", "便宜", "昂贵", "尺码", "收据", 
+    "旅行", "酒店", "预订", "护照", "行李", "海滩", "山", "航班", "导游", "纪念品", 
+    "工作", "办公室", "会议", "老板", "工资", "面试", "大学", "学生", "考试", "职业", 
+    "健康", "医生", "医院", "药", "疼痛", "头", "胃", "发烧", "药店", "紧急情况", 
+    "自然", "树", "河流", "海", "天空", "天气", "气候", "污染", "回收", "能源", 
+    "社会", "政府", "选举", "法律", "正义", "社区", "贫困", "平等", "移民", "公民", 
+    "技术", "互联网", "屏幕", "密码", "软件", "数据", "社交媒体", "广告", "隐私", "人工智能", 
+    "意见", "论点", "证据", "优点", "缺点", "然而", "因此", "尽管如此", "在我看来", "视角", 
+    "协议", "提案", "截止日期", "预算", "发票", "客户", "谈判", "责任", "部门", "合同", 
+    "打破僵局", "小菜一碟", "千载难逢", "一针见血", "迟做总比不做好", "价格昂贵", "照看", "放轻松", "长话短说", "太阳打西边出来", 
+    "不好意思", "在哪里？", "多少钱？", "我不懂", "对不起", "欢迎", "请再说一遍？", "你会说英语吗？", "祝你好运", "回头见"
+  ],
+  ja: [
+    "やあ", "おはよう", "おやすみ", "ありがとう", "お願いします", "さようなら", "はい", "いいえ", "こんにちは", "はじめまして", 
+    "一", "二", "三", "四", "五", "赤", "青", "緑", "黄色", "黒", 
+    "月曜日", "今日", "明日", "昨日", "朝", "夜", "火曜日", "水曜日", "週", "時間", 
+    "母", "父", "兄", "姉", "友達", "家族", "息子", "娘", "おじいさん", "おばあさん", 
+    "水", "パン", "コーヒー", "お茶", "牛乳", "りんご", "ご飯", "鶏肉", "魚", "オレンジ", 
+    "家", "部屋", "ドア", "窓", "テーブル", "椅子", "ベッド", "鍵", "本", "電話", 
+    "都市", "通り", "駅", "バス", "電車", "車", "空港", "切符", "地図", "住所", 
+    "お金", "値段", "店", "市場", "カード", "現金", "安い", "高い", "サイズ", "レシート", 
+    "旅行", "ホテル", "予約", "パスポート", "荷物", "ビーチ", "山", "便", "ガイド", "お土産", 
+    "仕事", "オフィス", "会議", "上司", "給料", "面接", "大学", "学生", "試験", "キャリア", 
+    "健康", "医者", "病院", "薬", "痛み", "頭", "胃", "熱", "薬局", "緊急事態", 
+    "自然", "木", "川", "海", "空", "天気", "気候", "汚染", "リサイクル", "エネルギー", 
+    "社会", "政府", "選挙", "法律", "正義", "コミュニティ", "貧困", "平等", "移民", "市民", 
+    "技術", "インターネット", "画面", "パスワード", "ソフトウェア", "データ", "SNS", "広告", "プライバシー", "人工知能", 
+    "意見", "主張", "証拠", "利点", "欠点", "しかし", "したがって", "それでも", "私の意見では", "視点", 
+    "合意", "提案", "締め切り", "予算", "請求書", "顧客", "交渉", "責任", "部署", "契約", 
+    "場を和ませる", "朝飯前", "ごくたまに", "的を射る", "遅くてもやらないよりまし", "非常に高くつく", "目を配る", "気楽にやる", "手短に言うと", "ありえない", 
+    "すみません", "どこですか", "いくらですか", "わかりません", "ごめんなさい", "ようこそ", "もう一度言ってください", "英語を話しますか", "幸運を祈ります", "また後で"
+  ],
+  ko: [
+    "안녕하세요", "좋은 아침", "안녕히 주무세요", "감사합니다", "주세요", "안녕히 가세요", "네", "아니요", "좋은 오후", "만나서 반갑습니다", 
+    "하나", "둘", "셋", "넷", "다섯", "빨강", "파랑", "초록", "노랑", "검정", 
+    "월요일", "오늘", "내일", "어제", "아침", "밤", "화요일", "수요일", "주", "시간", 
+    "어머니", "아버지", "형", "누나", "친구", "가족", "아들", "딸", "할아버지", "할머니", 
+    "물", "빵", "커피", "차", "우유", "사과", "밥", "닭고기", "물고기", "오렌지", 
+    "집", "방", "문", "창문", "탁자", "의자", "침대", "열쇠", "책", "전화", 
+    "도시", "거리", "역", "버스", "기차", "자동차", "공항", "표", "지도", "주소", 
+    "돈", "가격", "가게", "시장", "카드", "현금", "저렴한", "비싼", "사이즈", "영수증", 
+    "여행", "호텔", "예약", "여권", "짐", "해변", "산", "항공편", "가이드", "기념품", 
+    "일", "사무실", "회의", "상사", "월급", "면접", "대학", "학생", "시험", "경력", 
+    "건강", "의사", "병원", "약", "통증", "머리", "위", "열", "약국", "비상 상황", 
+    "자연", "나무", "강", "바다", "하늘", "날씨", "기후", "오염", "재활용", "에너지", 
+    "사회", "정부", "선거", "법", "정의", "공동체", "빈곤", "평등", "이민", "시민", 
+    "기술", "인터넷", "화면", "비밀번호", "소프트웨어", "데이터", "소셜 미디어", "광고", "개인정보", "인공지능", 
+    "의견", "주장", "증거", "장점", "단점", "그러나", "따라서", "그럼에도 불구하고", "제 생각에는", "관점", 
+    "합의", "제안", "마감일", "예산", "송장", "고객", "협상", "책임", "부서", "계약", 
+    "어색함을 깨다", "식은 죽 먹기", "아주 가끔", "핵심을 찌르다", "늦더라도 안 하는 것보다 낫다", "엄청 비싸다", "지켜보다", "편하게 하다", "간단히 말하면", "돼지가 날 때", 
+    "실례합니다", "어디예요?", "얼마예요?", "이해가 안 돼요", "미안합니다", "환영합니다", "다시 말해 주세요", "영어를 하세요?", "행운을 빌어요", "나중에 봐요"
+  ]
 };
 
 /* Romanización para lenguas no latinas */
 const ROMAN = {
-  ru: ['privet','dobroye utro','spokoynoy nochi','spasibo','pozhaluysta','do svidaniya','odin','dva','tri','krasnyy','siniy','zelyonyy',"mat'",'otets','brat','sestra','drug',"sem'ya",'voda','khleb','kofe','chay','moloko','yabloko',"ponedel'nik",'segodnya','zavtra','vchera','utro',"noch'",'izvinite','gde eto?',"skol'ko stoit?",'ya ne ponimayu','prostite','dobro pozhalovat'],
-  zh: ['nǐ hǎo','zǎoshang hǎo',"wǎn'ān",'xièxie','qǐng','zàijiàn','yī','èr','sān','hóngsè','lánsè','lǜsè','māma','bàba','gēge','jiějie','péngyou','jiātíng','shuǐ','miànbāo','kāfēi','chá','niúnǎi','píngguǒ','xīngqīyī','jīntiān','míngtiān','zuótiān','zǎoshang','wǎnshang','bù hǎoyìsi','zài nǎlǐ?','duōshao qián?','wǒ bù dǒng','duìbuqǐ','huānyíng'],
-  ja: ['konnichiwa','ohayō','oyasumi','arigatō','onegaishimasu','sayōnara','ichi','ni','san','aka','ao','midori','haha','chichi','ani','ane','tomodachi','kazoku','mizu','pan','kōhī','ocha','gyūnyū','ringo','getsuyōbi','kyō','ashita','kinō','asa','yoru','sumimasen','doko desu ka','ikura desu ka','wakarimasen','gomen nasai','yōkoso'],
-  ko: ['annyeonghaseyo','joeun achim','annyeonghi jumuseyo','gamsahamnida','juseyo','annyeonghi gaseyo','hana','dul','set','ppalgang','parang','chorok','eomeoni','abeoji','hyeong','nuna','chingu','gajok','mul','ppang','keopi','cha','uyu','sagwa','woryoil','oneul','naeil','eoje','achim','bam','sillyehamnida','eodiyeyo?','eolmayeyo?','ihaega an dwaeyo','mianhamnida','hwanyeonghamnida']
+  ru: [
+    "privet", "dobroye utro", "spokoynoy nochi", "spasibo", "pozhaluysta", "do svidaniya", "da", "net", "dobryy den'", "priyatno poznakomit'sya", 
+    "odin", "dva", "tri", "chetyre", "pyat'", "krasnyy", "siniy", "zelyonyy", "zhyoltyy", "chyornyy", 
+    "ponedel'nik", "segodnya", "zavtra", "vchera", "utro", "noch'", "vtornik", "sreda", "nedelya", "chas", 
+    "mat'", "otets", "brat", "sestra", "drug", "sem'ya", "syn", "doch'", "dedushka", "babushka", 
+    "voda", "khleb", "kofe", "chay", "moloko", "yabloko", "ris", "kuritsa", "ryba", "apel'sin", 
+    "dom", "komnata", "dver'", "okno", "stol", "stul", "krovat'", "klyuch", "kniga", "telefon", 
+    "gorod", "ulitsa", "stantsiya", "avtobus", "poyezd", "mashina", "aeroport", "bilet", "karta", "adres", 
+    "den'gi", "tsena", "magazin", "rynok", "karta", "nalichnyye", "deshyovyy", "dorogoy", "razmer", "chek", 
+    "poyezdka", "otel'", "bron'", "pasport", "bagazh", "plyazh", "gora", "reys", "gid", "suvenir", 
+    "rabota", "ofis", "vstrecha", "nachal'nik", "zarplata", "sobesedovaniye", "universitet", "student", "ekzamen", "kar'yera", 
+    "zdorov'ye", "vrach", "bol'nitsa", "lekarstvo", "bol'", "golova", "zhivot", "temperatura", "apteka", "chrezvychaynaya situatsiya", 
+    "priroda", "derevo", "reka", "more", "nebo", "pogoda", "klimat", "zagryazneniye", "pererabotka", "energiya", 
+    "obshchestvo", "pravitel'stvo", "vybory", "zakon", "spravedlivost'", "soobshchestvo", "bednost'", "ravenstvo", "immigratsiya", "grazhdanin", 
+    "tekhnologiya", "internet", "ekran", "parol'", "programmnoye obespecheniye", "dannyye", "sotsial'nyye seti", "reklama", "konfidentsial'nost'", "iskusstvennyy intellekt", 
+    "mneniye", "argument", "dokazatel'stvo", "preimushchestvo", "nedostatok", "odnako", "sledovatel'no", "tem ne meneye", "po moyemu mneniyu", "tochka zreniya", 
+    "soglasheniye", "predlozheniye", "srok", "byudzhet", "schyot", "kliyent", "peregovory", "otvetstvennost'", "otdel", "dogovor", 
+    "rastopit' lyod", "proshche parenoi repy", "raz v sto let", "popast' v tochku", "luchshe pozdno chem nikogda", "stoit' ochen' dorogo", "sledit' za", "ne napryagat'sya", "koroche govorya", "kogda rak na gore svistnet", 
+    "izvinite", "gde eto?", "skol'ko stoit?", "ya ne ponimayu", "prostite", "dobro pozhalovat", "mozhete povtorit'?", "vy govorite po-angliyski?", "udachi", "do skorogo"
+  ],
+  zh: [
+    "nǐ hǎo", "zǎoshang hǎo", "wǎn'ān", "xièxie", "qǐng", "zàijiàn", "shì", "bù", "xiàwǔ hǎo", "hěn gāoxìng rènshi nǐ", 
+    "yī", "èr", "sān", "sì", "wǔ", "hóngsè", "lánsè", "lǜsè", "huángsè", "hēisè", 
+    "xīngqīyī", "jīntiān", "míngtiān", "zuótiān", "zǎoshang", "wǎnshang", "xīngqī'èr", "xīngqīsān", "xīngqī", "xiǎoshí", 
+    "māma", "bàba", "gēge", "jiějie", "péngyou", "jiātíng", "érzi", "nǚ'ér", "yéye", "nǎinai", 
+    "shuǐ", "miànbāo", "kāfēi", "chá", "niúnǎi", "píngguǒ", "mǐfàn", "jīròu", "yú", "chéngzi", 
+    "fángzi", "fángjiān", "mén", "chuānghu", "zhuōzi", "yǐzi", "chuáng", "yàoshi", "shū", "diànhuà", 
+    "chéngshì", "jiēdào", "chēzhàn", "gōngjiāochē", "huǒchē", "qìchē", "jīchǎng", "chēpiào", "dìtú", "dìzhǐ", 
+    "qián", "jiàgé", "shāngdiàn", "shìchǎng", "kǎ", "xiànjīn", "piányi", "ángguì", "chǐmǎ", "shōujù", 
+    "lǚxíng", "jiǔdiàn", "yùdìng", "hùzhào", "xíngli", "hǎitān", "shān", "hángbān", "dǎoyóu", "jìniànpǐn", 
+    "gōngzuò", "bàngōngshì", "huìyì", "lǎobǎn", "gōngzī", "miànshì", "dàxué", "xuéshēng", "kǎoshì", "zhíyè", 
+    "jiànkāng", "yīshēng", "yīyuàn", "yào", "téngtòng", "tóu", "wèi", "fāshāo", "yàodiàn", "jǐnjí qíngkuàng", 
+    "zìrán", "shù", "héliú", "hǎi", "tiānkōng", "tiānqì", "qìhòu", "wūrǎn", "huíshōu", "néngyuán", 
+    "shèhuì", "zhèngfǔ", "xuǎnjǔ", "fǎlǜ", "zhèngyì", "shèqū", "pínkùn", "píngděng", "yímín", "gōngmín", 
+    "jìshù", "hùliánwǎng", "píngmù", "mìmǎ", "ruǎnjiàn", "shùjù", "shèjiāo méitǐ", "guǎnggào", "yǐnsī", "réngōng zhìnéng", 
+    "yìjiàn", "lùndiǎn", "zhèngjù", "yōudiǎn", "quēdiǎn", "rán'ér", "yīncǐ", "jǐnguǎn rúcǐ", "zài wǒ kànlái", "shìjiǎo", 
+    "xiéyì", "tí'àn", "jiézhǐ rìqī", "yùsuàn", "fāpiào", "kèhù", "tánpàn", "zérèn", "bùmén", "hétóng", 
+    "dǎpò jiāngjú", "xiǎocài yī dié", "qiānzǎi nánféng", "yīzhēnjiànxiě", "chí zuò zǒng bǐ bù zuò hǎo", "jiàgé ángguì", "zhàokàn", "fàng qīngsōng", "chánghuà duǎnshuō", "tàiyáng dǎ xībiān chūlái", 
+    "bù hǎoyìsi", "zài nǎlǐ?", "duōshao qián?", "wǒ bù dǒng", "duìbuqǐ", "huānyíng", "qǐng zài shuō yībiàn?", "nǐ huì shuō yīngyǔ ma?", "zhù nǐ hǎoyùn", "huítóu jiàn"
+  ],
+  ja: [
+    "konnichiwa", "ohayō", "oyasumi", "arigatō", "onegaishimasu", "sayōnara", "hai", "iie", "konnichiwa", "hajimemashite", 
+    "ichi", "ni", "san", "yon", "go", "aka", "ao", "midori", "kiiro", "kuro", 
+    "getsuyōbi", "kyō", "ashita", "kinō", "asa", "yoru", "kayōbi", "suiyōbi", "shū", "jikan", 
+    "haha", "chichi", "ani", "ane", "tomodachi", "kazoku", "musuko", "musume", "ojii-san", "obaa-san", 
+    "mizu", "pan", "kōhī", "ocha", "gyūnyū", "ringo", "gohan", "toriniku", "sakana", "orenji", 
+    "ie", "heya", "doa", "mado", "tēburu", "isu", "beddo", "kagi", "hon", "denwa", 
+    "toshi", "tōri", "eki", "basu", "densha", "kuruma", "kūkō", "kippu", "chizu", "jūsho", 
+    "okane", "nedan", "mise", "ichiba", "kādo", "genkin", "yasui", "takai", "saizu", "reshīto", 
+    "ryokō", "hoteru", "yoyaku", "pasupōto", "nimotsu", "bīchi", "yama", "bin", "gaido", "omiyage", 
+    "shigoto", "ofisu", "kaigi", "jōshi", "kyūryō", "mensetsu", "daigaku", "gakusei", "shiken", "kyaria", 
+    "kenkō", "isha", "byōin", "kusuri", "itami", "atama", "i", "netsu", "yakkyoku", "kinkyū jitai", 
+    "shizen", "ki", "kawa", "umi", "sora", "tenki", "kikō", "osen", "risaikuru", "enerugī", 
+    "shakai", "seifu", "senkyo", "hōritsu", "seigi", "komyuniti", "hinkon", "byōdō", "imin", "shimin", 
+    "gijutsu", "intānetto", "gamen", "pasuwādo", "sofutowea", "dēta", "esuenuesu", "kōkoku", "puraibashī", "jinkō chinō", 
+    "iken", "shuchō", "shōko", "riten", "ketten", "shikashi", "shitagatte", "sore demo", "watashi no iken de wa", "shiten", 
+    "gōi", "teian", "shimekiri", "yosan", "seikyūsho", "kokyaku", "kōshō", "sekinin", "busho", "keiyaku", 
+    "ba o yawamaseru", "asagohan mae", "goku tamani", "mato o iru", "osokute mo yaranai yori mashi", "hijō ni takatsuku", "me o kubaru", "kiraku ni yaru", "temijika ni iu to", "arienai", 
+    "sumimasen", "doko desu ka", "ikura desu ka", "wakarimasen", "gomen nasai", "yōkoso", "mō ichido itte kudasai", "eigo o hanashimasu ka", "kōun o inorimasu", "mata ato de"
+  ],
+  ko: [
+    "annyeonghaseyo", "joeun achim", "annyeonghi jumuseyo", "gamsahamnida", "juseyo", "annyeonghi gaseyo", "ne", "aniyo", "joeun ohu", "mannaseo bangapseumnida", 
+    "hana", "dul", "set", "net", "daseot", "ppalgang", "parang", "chorok", "norang", "geomjeong", 
+    "woryoil", "oneul", "naeil", "eoje", "achim", "bam", "hwayoil", "suyoil", "ju", "sigan", 
+    "eomeoni", "abeoji", "hyeong", "nuna", "chingu", "gajok", "adeul", "ttal", "harabeoji", "halmeoni", 
+    "mul", "ppang", "keopi", "cha", "uyu", "sagwa", "bap", "dakgogi", "mulgogi", "orenji", 
+    "jip", "bang", "mun", "changmun", "takja", "uija", "chimdae", "yeolsoe", "chaek", "jeonhwa", 
+    "dosi", "geori", "yeok", "beoseu", "gicha", "jadongcha", "gonghang", "pyo", "jido", "juso", 
+    "don", "gagyeok", "gage", "sijang", "kadeu", "hyeongeum", "jeryeomhan", "bissan", "saijeu", "yeongsujeung", 
+    "yeohaeng", "hotel", "yeyak", "yeogwon", "jim", "haebyeon", "san", "hanggongpyeon", "gaideu", "ginyeompum", 
+    "il", "samusil", "hoeui", "sangsa", "wolgeup", "myeonjeop", "daehak", "haksaeng", "siheom", "gyeongnyeok", 
+    "geongang", "uisa", "byeongwon", "yak", "tongjeung", "meori", "wi", "yeol", "yakguk", "bisang sanghwang", 
+    "jayeon", "namu", "gang", "bada", "haneul", "nalssi", "gihu", "oyeom", "jaehwaryong", "eneoji", 
+    "sahoe", "jeongbu", "seongeo", "beop", "jeongui", "gongdongche", "bingon", "pyeongdeung", "imin", "simin", 
+    "gisul", "inteonet", "hwamyeon", "bimilbeonho", "sopeuteuweeo", "deiteo", "soseol midieo", "gwanggo", "gaeinjeongbo", "ingongjineung", 
+    "uigyeon", "jujang", "jeunggeo", "jangjeom", "danjeom", "geureona", "ttaraseo", "geureomedo bulguhago", "je saenggageneun", "gwanjeom", 
+    "hapui", "jean", "magamil", "yesan", "songjang", "gogaek", "hyeopsang", "chaegim", "buseo", "gyeyak", 
+    "eosaekhameul kkaeda", "sigeun juk meokgi", "aju gakkeum", "haeksimeul jjireuda", "neujdeorado an haneun geotboda natda", "eomcheong bissada", "jikyeoboda", "pyeonhage hada", "gandanhi malhamyeon", "dwaejiga nal ttae", 
+    "sillyehamnida", "eodiyeyo?", "eolmayeyo?", "ihaega an dwaeyo", "mianhamnida", "hwanyeonghamnida", "dasi malhae juseyo", "yeongeoreul haseyo?", "haenguneul bireoyo", "najunge bwayo"
+  ]
 };
 
 /* Idiomas nativos (interfaz + glosas) */
@@ -106,15 +443,529 @@ const TARGET_LANGS = [
   { code:'ko', tts:'ko-KR', flag:'🇰🇷', roman:true, name:{ es:'Coreano', en:'Korean', pt:'Coreano', fr:'Coréen' } }
 ];
 
-/* Unidades: 1 por nivel MCER, 6 conceptos cada una */
+/* Unidades: 3 por nivel MCER, 10 conceptos cada una (18 unidades / 180 conceptos) */
 const UNITS = [
-  { level:'A1', start:0,  end:6,  icon:'fa-comments',      title:{ es:'Saludos',            en:'Greetings',        pt:'Saudações',         fr:'Salutations' } },
-  { level:'A2', start:6,  end:12, icon:'fa-palette',       title:{ es:'Números y Colores',  en:'Numbers & Colors', pt:'Números e Cores',   fr:'Nombres et Couleurs' } },
-  { level:'B1', start:12, end:18, icon:'fa-people-group',  title:{ es:'Familia y Personas', en:'Family & People',  pt:'Família e Pessoas', fr:'Famille et Personnes' } },
-  { level:'B2', start:18, end:24, icon:'fa-utensils',      title:{ es:'Comida y Bebida',    en:'Food & Drink',     pt:'Comida e Bebida',   fr:'Nourriture et Boissons' } },
-  { level:'C1', start:24, end:30, icon:'fa-clock',         title:{ es:'Días y Horas',       en:'Days & Time',      pt:'Dias e Horas',      fr:'Jours et Heures' } },
-  { level:'C2', start:30, end:36, icon:'fa-comment-dots',  title:{ es:'Frases Útiles',      en:'Useful Phrases',   pt:'Frases Úteis',      fr:'Phrases Utiles' } }
+  { id:"A1-1", level:"A1", start:0, end:10, icon:"fa-comments", title:{ es:"Saludos y presentaciones", en:"Greetings & Introductions", pt:"Saudações e apresentações", fr:"Salutations et présentations" } },
+  { id:"A1-2", level:"A1", start:10, end:20, icon:"fa-palette", title:{ es:"Números, colores y objetos", en:"Numbers, Colors & Objects", pt:"Números, cores e objetos", fr:"Nombres, couleurs et objets" } },
+  { id:"A1-3", level:"A1", start:20, end:30, icon:"fa-clock", title:{ es:"Días, horas y rutina", en:"Days, Time & Routine", pt:"Dias, horas e rotina", fr:"Jours, heures et routine" } },
+  { id:"A2-1", level:"A2", start:30, end:40, icon:"fa-people-group", title:{ es:"Familia y personas", en:"Family & People", pt:"Família e pessoas", fr:"Famille et personnes" } },
+  { id:"A2-2", level:"A2", start:40, end:50, icon:"fa-utensils", title:{ es:"Comida y bebida", en:"Food & Drink", pt:"Comida e bebida", fr:"Nourriture et boissons" } },
+  { id:"A2-3", level:"A2", start:50, end:60, icon:"fa-couch", title:{ es:"Casa y objetos cotidianos", en:"Home & Everyday Objects", pt:"Casa e objetos cotidianos", fr:"Maison et objets du quotidien" } },
+  { id:"B1-1", level:"B1", start:60, end:70, icon:"fa-city", title:{ es:"Ciudad y transporte", en:"City & Transport", pt:"Cidade e transporte", fr:"Ville et transports" } },
+  { id:"B1-2", level:"B1", start:70, end:80, icon:"fa-cart-shopping", title:{ es:"Compras y dinero", en:"Shopping & Money", pt:"Compras e dinheiro", fr:"Achats et argent" } },
+  { id:"B1-3", level:"B1", start:80, end:90, icon:"fa-plane", title:{ es:"Viajes y alojamiento", en:"Travel & Accommodation", pt:"Viagens e hospedagem", fr:"Voyages et hébergement" } },
+  { id:"B2-1", level:"B2", start:90, end:100, icon:"fa-briefcase", title:{ es:"Trabajo y estudios", en:"Work & Study", pt:"Trabalho e estudos", fr:"Travail et études" } },
+  { id:"B2-2", level:"B2", start:100, end:110, icon:"fa-heart-pulse", title:{ es:"Salud y cuerpo", en:"Health & Body", pt:"Saúde e corpo", fr:"Santé et corps" } },
+  { id:"B2-3", level:"B2", start:110, end:120, icon:"fa-leaf", title:{ es:"Naturaleza y medio ambiente", en:"Nature & Environment", pt:"Natureza e meio ambiente", fr:"Nature et environnement" } },
+  { id:"C1-1", level:"C1", start:120, end:130, icon:"fa-landmark", title:{ es:"Sociedad y actualidad", en:"Society & Current Affairs", pt:"Sociedade e atualidade", fr:"Société et actualité" } },
+  { id:"C1-2", level:"C1", start:130, end:140, icon:"fa-microchip", title:{ es:"Tecnología y medios", en:"Technology & Media", pt:"Tecnologia e mídia", fr:"Technologie et médias" } },
+  { id:"C1-3", level:"C1", start:140, end:150, icon:"fa-scale-balanced", title:{ es:"Opiniones y debate", en:"Opinions & Debate", pt:"Opiniões e debate", fr:"Opinions et débat" } },
+  { id:"C2-1", level:"C2", start:150, end:160, icon:"fa-file-signature", title:{ es:"Lenguaje formal y negocios", en:"Formal Language & Business", pt:"Linguagem formal e negócios", fr:"Langage formel et affaires" } },
+  { id:"C2-2", level:"C2", start:160, end:170, icon:"fa-comment-dots", title:{ es:"Expresiones y modismos", en:"Idioms & Expressions", pt:"Expressões e ditados", fr:"Expressions et idiomes" } },
+  { id:"C2-3", level:"C2", start:170, end:180, icon:"fa-handshake", title:{ es:"Frases útiles y cortesía", en:"Useful Phrases & Courtesy", pt:"Frases úteis e cortesia", fr:"Phrases utiles et politesse" } }
 ];
+
+/* Modalidades de lección: 5 por unidad (90 lecciones en total)
+   kind: v = vocabulary · q = practice · s = speaking · w = writing · d = listening_dictation */
+const LESSON_META = [
+  { kind:'v', icon:'fa-book',            label:'vocab',     desc:'vocabDesc' },
+  { kind:'q', icon:'fa-circle-question', label:'practice',  desc:'practiceDesc' },
+  { kind:'s', icon:'fa-microphone',      label:'speaking',  desc:'speakingDesc' },
+  { kind:'w', icon:'fa-pen-nib',         label:'writing',   desc:'writingDesc' },
+  { kind:'d', icon:'fa-headphones',      label:'dictation', desc:'dictationDesc' }
+];
+const LESSON_KINDS = LESSON_META.map(function(m){ return m.kind; });
+const UNLOCK_PCT = 40;
+const SPEAK_THRESHOLD = 0.72;
+
+/* Respuestas alternativas aceptadas (además de la traducción principal) */
+const ANSWER_VARIANTS = {
+  "en": {
+    0: [
+      "hi",
+      "hey"
+    ],
+    1: [
+      "morning"
+    ],
+    3: [
+      "thanks",
+      "thank you very much"
+    ],
+    5: [
+      "bye",
+      "see you"
+    ],
+    6: [
+      "yeah",
+      "yep"
+    ],
+    7: [
+      "nope"
+    ],
+    8: [
+      "afternoon"
+    ],
+    9: [
+      "pleased to meet you"
+    ],
+    50: [
+      "home"
+    ],
+    60: [
+      "town"
+    ],
+    61: [
+      "road"
+    ],
+    62: [
+      "train station"
+    ],
+    70: [
+      "cash"
+    ],
+    71: [
+      "cost"
+    ],
+    76: [
+      "inexpensive"
+    ],
+    77: [
+      "costly"
+    ],
+    80: [
+      "journey"
+    ],
+    90: [
+      "job"
+    ],
+    91: [
+      "workplace"
+    ],
+    101: [
+      "physician"
+    ],
+    103: [
+      "medication"
+    ],
+    104: [
+      "ache"
+    ],
+    113: [
+      "ocean"
+    ],
+    121: [
+      "administration"
+    ],
+    124: [
+      "fairness"
+    ],
+    130: [
+      "tech"
+    ],
+    132: [
+      "display"
+    ],
+    133: [
+      "passcode"
+    ],
+    135: [
+      "program"
+    ],
+    136: [
+      "information"
+    ],
+    138: [
+      "publicity"
+    ],
+    139: [
+      "confidentiality"
+    ],
+    140: [
+      "view"
+    ],
+    141: [
+      "reasoning"
+    ],
+    142: [
+      "proof"
+    ],
+    143: [
+      "benefit"
+    ],
+    144: [
+      "drawback"
+    ],
+    146: [
+      "thus"
+    ],
+    147: [
+      "nonetheless"
+    ],
+    148: [
+      "personally"
+    ],
+    149: [
+      "perspective"
+    ],
+    150: [
+      "deal"
+    ],
+    151: [
+      "suggestion"
+    ],
+    152: [
+      "due date"
+    ],
+    153: [
+      "funds"
+    ],
+    154: [
+      "bill"
+    ],
+    155: [
+      "customer"
+    ],
+    156: [
+      "talks"
+    ],
+    157: [
+      "duty"
+    ],
+    158: [
+      "division"
+    ],
+    170: [
+      "pardon me"
+    ],
+    171: [
+      "where is it"
+    ],
+    172: [
+      "how much is it?",
+      "how much does it cost?"
+    ],
+    173: [
+      "i do not understand"
+    ],
+    174: [
+      "i am sorry"
+    ],
+    176: [
+      "can you repeat that?",
+      "could you repeat?",
+      "can you say that again?"
+    ],
+    177: [
+      "do you speak english"
+    ],
+    178: [
+      "good luck!"
+    ],
+    179: [
+      "see you",
+      "later"
+    ]
+  },
+  "fr": {
+    0: [
+      "salut"
+    ],
+    1: [
+      "bonjour"
+    ],
+    3: [
+      "merci beaucoup"
+    ],
+    5: [
+      "salut"
+    ],
+    8: [
+      "bon après midi"
+    ],
+    9: [
+      "ravi de vous rencontrer"
+    ],
+    170: [
+      "excusez moi"
+    ],
+    173: [
+      "je comprends pas"
+    ],
+    176: [
+      "pouvez vous répéter",
+      "pouvez-vous répéter"
+    ],
+    177: [
+      "parlez vous anglais"
+    ],
+    179: [
+      "a plus tard",
+      "à plus tard!"
+    ]
+  },
+  "de": {
+    0: [
+      "hallo!"
+    ],
+    3: [
+      "danke schön",
+      "vielen dank"
+    ],
+    5: [
+      "tschüss"
+    ],
+    6: [
+      "jawohl"
+    ],
+    173: [
+      "ich verstehe das nicht"
+    ],
+    175: [
+      "willkommen!"
+    ],
+    176: [
+      "können sie wiederholen"
+    ],
+    179: [
+      "bis später!"
+    ]
+  },
+  "it": {
+    0: [
+      "salve"
+    ],
+    3: [
+      "grazie mille"
+    ],
+    5: [
+      "ciao"
+    ],
+    170: [
+      "mi scusi"
+    ],
+    173: [
+      "non lo capisco"
+    ],
+    176: [
+      "puoi ripetere",
+      "può ripetere"
+    ],
+    177: [
+      "parla inglese"
+    ],
+    179: [
+      "a dopo",
+      "arrivederci"
+    ]
+  },
+  "pt": {
+    0: [
+      "oi"
+    ],
+    3: [
+      "obrigada",
+      "muito obrigado"
+    ],
+    5: [
+      "tchau",
+      "até logo"
+    ],
+    170: [
+      "desculpe",
+      "com licença"
+    ],
+    173: [
+      "não compreendo"
+    ],
+    176: [
+      "pode repetir isso"
+    ],
+    177: [
+      "fala inglês"
+    ],
+    179: [
+      "até mais"
+    ]
+  },
+  "ru": {
+    0: [
+      "здравствуйте"
+    ],
+    3: [
+      "большое спасибо"
+    ],
+    5: [
+      "пока"
+    ],
+    170: [
+      "простите"
+    ],
+    173: [
+      "я не понимаю вас"
+    ],
+    178: [
+      "удачи!"
+    ]
+  },
+  "zh": {
+    0: [
+      "您好"
+    ],
+    3: [
+      "谢谢你",
+      "多谢"
+    ],
+    5: [
+      "拜拜"
+    ],
+    170: [
+      "对不起"
+    ],
+    174: [
+      "抱歉"
+    ],
+    179: [
+      "再见"
+    ]
+  },
+  "ja": {
+    0: [
+      "どうも"
+    ],
+    3: [
+      "どうもありがとう"
+    ],
+    5: [
+      "じゃあね"
+    ],
+    170: [
+      "ごめんなさい"
+    ],
+    174: [
+      "すみません"
+    ],
+    179: [
+      "じゃあね",
+      "またね"
+    ]
+  },
+  "ko": {
+    0: [
+      "안녕"
+    ],
+    3: [
+      "고맙습니다"
+    ],
+    5: [
+      "안녕"
+    ],
+    170: [
+      "죄송합니다"
+    ],
+    174: [
+      "죄송합니다"
+    ],
+    179: [
+      "또 봐요"
+    ]
+  }
+};
+
+/* Los números también se aceptan escritos con cifras */
+const NUMBER_DIGITS = { 10:'1', 11:'2', 12:'3', 13:'4', 14:'5' };
+
+function speechRecognitionSupported(){
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+/* Normaliza mayúsculas, acentos, apóstrofos y signos de puntuación */
+function normalizeAnswer(value){
+  let s = String(value == null ? '' : value).toLowerCase().trim();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e){}
+  s = s.replace(/ß/g, 'ss').replace(/ё/g, 'е');
+  s = s.replace(/['’‘`´]/g, '');
+  s = s.replace(/[.,!?;:"“”«»¡¿…()\[\]{}\-–—_/\\|]/g, ' ');
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = new Array(n + 1), cur = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++){
+    cur[0] = i;
+    for (let j = 1; j <= n; j++){
+      const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    const tmp = prev; prev = cur; cur = tmp;
+  }
+  return prev[n];
+}
+
+function similarityScore(a, b){
+  const max = Math.max(a.length, b.length);
+  if (!max) return 0;
+  return 1 - levenshtein(a, b) / max;
+}
+
+function sameGlossTargets(lang, idx){
+  const nPool = conceptPoolNative(curNative());
+  const tPool = conceptPoolTarget(lang);
+  const gloss = nPool[idx];
+  if (!gloss) return [];
+  const out = [];
+  for (let j = 0; j < tPool.length; j++){
+    if (nPool[j] === gloss) out.push(tPool[j]);
+  }
+  return out;
+}
+
+function acceptedAnswers(lang, idx, opts){
+  opts = opts || {};
+  const list = [conceptPoolTarget(lang)[idx]].filter(Boolean);
+  if (!opts.strict){
+    const variants = (ANSWER_VARIANTS[lang] || {})[idx] || [];
+    variants.forEach(function(v){ list.push(v); });
+  }
+  if (opts.sameGloss) sameGlossTargets(lang, idx).forEach(function(v){ if (list.indexOf(v) === -1) list.push(v); });
+  if (opts.roman){ const r = romanFor(lang, idx); if (r && list.indexOf(r) === -1) list.push(r); }
+  if (opts.numbers && NUMBER_DIGITS[idx]) list.push(NUMBER_DIGITS[idx]);
+  return list;
+}
+
+function answerMatches(value, accepted, mode){
+  const input = normalizeAnswer(value);
+  if (!input) return false;
+  const cjk = curTarget() === 'zh' || curTarget() === 'ja';
+  return accepted.some(function(ans){
+    const target = normalizeAnswer(ans);
+    if (!target) return false;
+    if (input === target) return true;
+    if (cjk && input.replace(/\s+/g, '') === target.replace(/\s+/g, '')) return true;
+    if (mode === 'speaking'){
+      const threshold = target.length <= 4 ? 0.8 : SPEAK_THRESHOLD;
+      return similarityScore(input, target) >= threshold;
+    }
+    return false;
+  });
+}
+
+function bestAnswerScore(value, accepted){
+  if (!normalizeAnswer(value)) return 0;
+  const cjk = curTarget() === 'zh' || curTarget() === 'ja';
+  return accepted.reduce(function(best, ans){
+    const target = normalizeAnswer(ans);
+    if (!target) return best;
+    let score = similarityScore(normalizeAnswer(value), target);
+    if (normalizeAnswer(value) === target) score = 1;
+    else if (cjk && normalizeAnswer(value).replace(/\s+/g, '') === target.replace(/\s+/g, '')) score = 1;
+    return Math.max(best, score);
+  }, 0);
+}
 
 const LEVELS = ['A1','A2','B1','B2','C1','C2'];
 const LEVEL_META = {
@@ -131,7 +982,7 @@ const LEVEL_META = {
    ============================================================ */
 const UI = {
   es: {
-    tagline:'Aprende idiomas por niveles MCER (A1–C2) con lecciones cortas, pronunciación nativa y progreso guardado en tu navegador.',
+    tagline:'Aprende idiomas por niveles MCER (A1–C2) con 18 unidades, 90 lecciones y práctica de vocabulario, expresión oral, escritura y dictado. Tu progreso se guarda en tu navegador.',
     yourName:'¿Cómo te llamas?', optionalName:'(opcional)',
     nativeLabel:'Idioma nativo', targetLabel:'Idioma de destino', begin:'Comenzar',
     noLogin:'Sin registros. Todo se guarda solo en tu dispositivo.',
@@ -148,17 +999,35 @@ const UI = {
     resetProgress:'Borrar todo mi progreso',
     resetConfirm:'¿Seguro que quieres borrar TODO tu progreso, XP y racha? Esta acción no se puede deshacer.',
     wellDone:'¡Bien hecho!', review:'repaso', welcomeMsg:'¡Bienvenido a DuckQuest!',
-    pathLocked:'Completa el 60% del nivel anterior para desbloquear',
+    pathLocked:'Completa el 40% del nivel anterior para desbloquear',
+    locked:'Bloqueada', unitLocked:'Completa el 40% de la unidad anterior para desbloquear esta unidad',
     allDoneTitle:'¡Has completado todo el curso!', allDoneDesc:'Eres oficialmente un DuckMaster. 🎓',
     noTTS:'Tu navegador no soporta síntesis de voz', howSay:'¿Cómo se dice', whatMeans:'¿Qué significa',
     listenChoose:'Escucha y elige el significado', proficiency:'MCER', resume:'Continuar',
     changeLangs:'Idiomas', nativeShort:'Nativo', targetShort:'Objetivo',
+    vocabDesc:'Tarjetas con audio y traducción', practiceDesc:'Opción múltiple y escucha',
+    speakingDesc:'Pronuncia con el micrófono', writingDesc:'Escribe la traducción', dictationDesc:'Escucha y escribe',
+    speaking:'Expresión oral', writing:'Escritura', dictation:'Dictado',
+    speakPrompt:'Lee en voz alta', speakHint:'Toca el micrófono y pronuncia la frase',
+    recording:'Grabando...', stopRecording:'Detener', listeningNow:'Escuchando...',
+    micUnsupported:'Tu navegador no soporta reconocimiento de voz. Puedes escribir tu respuesta.',
+    micDenied:'Permiso de micrófono denegado. Actívalo o escribe tu respuesta.',
+    micNoDevice:'No se encontró un micrófono. Escribe tu respuesta.',
+    micError:'No se pudo usar el micrófono. Intenta de nuevo o escribe tu respuesta.',
+    micNoSpeech:'No te escuché bien. Intenta de nuevo.',
+    typeInstead:'Escribir en su lugar', tryAgain:'Intentar de nuevo', pressToSpeak:'Pulsa para hablar',
+    heard:'Escuché', expected:'Respuesta esperada', yourAnswer:'Tu respuesta',
+    correct:'¡Correcto!', incorrect:'Aún no', checkAnswer:'Comprobar respuesta',
+    typeTranslation:'Escribe la traducción', dictationPrompt:'Escucha y escribe exactamente lo que oyes',
+    playAudio:'Reproducir audio', replayAudio:'Reproducir de nuevo',
+    showHint:'Mostrar pista', hideHint:'Ocultar pista', pronHint:'Pronunciación',
+    romanAcceptedNote:'También se acepta la romanización.', enterToCheck:'Pulsa Enter para comprobar', answerRequired:'Escribe una respuesta primero',
     badges:{ first:{n:'Primeros pasos',d:'Completa 1 lección'}, ten:{n:'Estudioso',d:'Completa 10 lecciones'},
       half:{n:'A mitad de camino',d:'50% del curso'}, all:{n:'Políglota',d:'Completa todo el curso'},
       streak3:{n:'En racha',d:'3 días seguidos'}, streak7:{n:'Imparable',d:'7 días seguidos'}, xp500:{n:'Energía',d:'Acumula 500 XP'} }
   },
   en: {
-    tagline:'Learn languages by CEFR levels (A1–C2) with short lessons, native pronunciation and progress saved in your browser.',
+    tagline:'Learn languages by CEFR levels (A1–C2) with 18 units, 90 lessons and vocabulary, speaking, writing and dictation practice. Your progress is saved in your browser.',
     yourName:'What is your name?', optionalName:'(optional)',
     nativeLabel:'Native language', targetLabel:'Target language', begin:'Start',
     noLogin:'No sign-up. Everything is stored only on your device.',
@@ -175,17 +1044,35 @@ const UI = {
     resetProgress:'Delete all my progress',
     resetConfirm:'Are you sure you want to delete ALL your progress, XP and streak? This cannot be undone.',
     wellDone:'Well done!', review:'review', welcomeMsg:'Welcome to DuckQuest!',
-    pathLocked:'Complete 60% of the previous level to unlock',
+    pathLocked:'Complete 40% of the previous level to unlock',
+    locked:'Locked', unitLocked:'Complete 40% of the previous unit to unlock this unit',
     allDoneTitle:'You have completed the whole course!', allDoneDesc:'You are officially a DuckMaster. 🎓',
     noTTS:'Your browser does not support speech synthesis', howSay:'How do you say', whatMeans:'What does it mean',
     listenChoose:'Listen and choose the meaning', proficiency:'CEFR', resume:'Continue',
     changeLangs:'Languages', nativeShort:'Native', targetShort:'Target',
+    vocabDesc:'Audio flashcards and translation', practiceDesc:'Multiple choice and listening',
+    speakingDesc:'Speak with the microphone', writingDesc:'Write the translation', dictationDesc:'Listen and write',
+    speaking:'Speaking', writing:'Writing', dictation:'Dictation',
+    speakPrompt:'Read aloud', speakHint:'Tap the microphone and say the phrase',
+    recording:'Recording...', stopRecording:'Stop', listeningNow:'Listening...',
+    micUnsupported:'Your browser does not support speech recognition. You can type your answer instead.',
+    micDenied:'Microphone permission denied. Enable it or type your answer.',
+    micNoDevice:'No microphone found. Please type your answer.',
+    micError:'Could not use the microphone. Try again or type your answer.',
+    micNoSpeech:"I didn't catch that. Try again.",
+    typeInstead:'Type instead', tryAgain:'Try again', pressToSpeak:'Tap to speak',
+    heard:'I heard', expected:'Expected answer', yourAnswer:'Your answer',
+    correct:'Correct!', incorrect:'Not quite', checkAnswer:'Check answer',
+    typeTranslation:'Type the translation', dictationPrompt:'Listen and type exactly what you hear',
+    playAudio:'Play audio', replayAudio:'Play again',
+    showHint:'Show hint', hideHint:'Hide hint', pronHint:'Pronunciation',
+    romanAcceptedNote:'Romanization is also accepted.', enterToCheck:'Press Enter to check', answerRequired:'Type an answer first',
     badges:{ first:{n:'First steps',d:'Complete 1 lesson'}, ten:{n:'Bookworm',d:'Complete 10 lessons'},
       half:{n:'Halfway there',d:'50% of the course'}, all:{n:'Polyglot',d:'Complete every lesson'},
       streak3:{n:'On fire',d:'3 days in a row'}, streak7:{n:'Unstoppable',d:'7 days in a row'}, xp500:{n:'Energized',d:'Earn 500 XP'} }
   },
   pt: {
-    tagline:'Aprenda idiomas por níveis MCER (A1–C2) com lições curtas, pronúncia nativa e progresso salvo no navegador.',
+    tagline:'Aprenda idiomas por níveis MCER (A1–C2) com 18 unidades, 90 lições e prática de vocabulário, expressão oral, escrita e ditado. Seu progresso fica salvo no navegador.',
     yourName:'Como você se chama?', optionalName:'(opcional)',
     nativeLabel:'Idioma nativo', targetLabel:'Idioma de destino', begin:'Começar',
     noLogin:'Sem cadastro. Tudo é salvo apenas no seu dispositivo.',
@@ -202,17 +1089,35 @@ const UI = {
     resetProgress:'Apagar todo o meu progresso',
     resetConfirm:'Tem certeza de que deseja apagar TODO o seu progresso, XP e sequência? Isso não pode ser desfeito.',
     wellDone:'Muito bem!', review:'revisão', welcomeMsg:'Bem-vindo ao DuckQuest!',
-    pathLocked:'Complete 60% do nível anterior para desbloquear',
+    pathLocked:'Complete 40% do nível anterior para desbloquear',
+    locked:'Bloqueada', unitLocked:'Complete 40% da unidade anterior para desbloquear esta unidade',
     allDoneTitle:'Você concluiu todo o curso!', allDoneDesc:'Você é oficialmente um DuckMaster. 🎓',
     noTTS:'Seu navegador não suporta síntese de voz', howSay:'Como se diz', whatMeans:'O que significa',
     listenChoose:'Ouça e escolha o significado', proficiency:'MCER', resume:'Continuar',
     changeLangs:'Idiomas', nativeShort:'Nativo', targetShort:'Objetivo',
+    vocabDesc:'Cartões com áudio e tradução', practiceDesc:'Múltipla escolha e escuta',
+    speakingDesc:'Pronuncie com o microfone', writingDesc:'Escreva a tradução', dictationDesc:'Ouça e escreva',
+    speaking:'Expressão oral', writing:'Escrita', dictation:'Ditado',
+    speakPrompt:'Leia em voz alta', speakHint:'Toque no microfone e diga a frase',
+    recording:'Gravando...', stopRecording:'Parar', listeningNow:'Ouvindo...',
+    micUnsupported:'Seu navegador não suporta reconhecimento de voz. Você pode escrever a resposta.',
+    micDenied:'Permissão de microfone negada. Ative-a ou escreva sua resposta.',
+    micNoDevice:'Nenhum microfone encontrado. Escreva sua resposta.',
+    micError:'Não foi possível usar o microfone. Tente novamente ou escreva sua resposta.',
+    micNoSpeech:'Não entendi. Tente novamente.',
+    typeInstead:'Escrever em vez disso', tryAgain:'Tentar novamente', pressToSpeak:'Toque para falar',
+    heard:'Ouvi', expected:'Resposta esperada', yourAnswer:'Sua resposta',
+    correct:'Correto!', incorrect:'Quase', checkAnswer:'Verificar resposta',
+    typeTranslation:'Escreva a tradução', dictationPrompt:'Ouça e escreva exatamente o que ouve',
+    playAudio:'Reproduzir áudio', replayAudio:'Reproduzir novamente',
+    showHint:'Mostrar dica', hideHint:'Ocultar dica', pronHint:'Pronúncia',
+    romanAcceptedNote:'A romanização também é aceita.', enterToCheck:'Pressione Enter para verificar', answerRequired:'Escreva uma resposta primeiro',
     badges:{ first:{n:'Primeiros passos',d:'Conclua 1 lição'}, ten:{n:'Estudioso',d:'Conclua 10 lições'},
       half:{n:'Na metade',d:'50% do curso'}, all:{n:'Poliglota',d:'Conclua todo o curso'},
       streak3:{n:'Em chamas',d:'3 dias seguidos'}, streak7:{n:'Imparável',d:'7 dias seguidos'}, xp500:{n:'Energia',d:'Acumule 500 XP'} }
   },
   fr: {
-    tagline:'Apprenez les langues par niveaux CECRL (A1–C2) avec des leçons courtes, une prononciation native et une progression enregistrée dans votre navigateur.',
+    tagline:'Apprenez les langues par niveaux CECRL (A1–C2) avec 18 unités, 90 leçons et des exercices de vocabulaire, d’expression orale, d’écriture et de dictée. Votre progression reste dans votre navigateur.',
     yourName:'Comment vous appelez-vous ?', optionalName:'(facultatif)',
     nativeLabel:'Langue maternelle', targetLabel:'Langue cible', begin:'Commencer',
     noLogin:'Sans inscription. Tout est enregistré uniquement sur votre appareil.',
@@ -229,11 +1134,29 @@ const UI = {
     resetProgress:'Effacer toute ma progression',
     resetConfirm:'Voulez-vous vraiment effacer TOUTE votre progression, XP et série ? Action irréversible.',
     wellDone:'Bien joué !', review:'révision', welcomeMsg:'Bienvenue sur DuckQuest !',
-    pathLocked:'Terminez 60% du niveau précédent pour débloquer',
+    pathLocked:'Terminez 40% du niveau précédent pour débloquer',
+    locked:'Verrouillée', unitLocked:'Terminez 40% de l’unité précédente pour débloquer cette unité',
     allDoneTitle:'Vous avez terminé tout le cours !', allDoneDesc:'Vous êtes officiellement un DuckMaster. 🎓',
     noTTS:'Votre navigateur ne prend pas en charge la synthèse vocale', howSay:'Comment dit-on', whatMeans:'Que signifie',
     listenChoose:'Écoutez et choisissez le sens', proficiency:'CECRL', resume:'Continuer',
     changeLangs:'Langues', nativeShort:'Maternelle', targetShort:'Cible',
+    vocabDesc:'Cartes audio et traduction', practiceDesc:'Choix multiple et écoute',
+    speakingDesc:'Prononcez au micro', writingDesc:'Écrivez la traduction', dictationDesc:'Écoutez et écrivez',
+    speaking:'Expression orale', writing:'Écriture', dictation:'Dictée',
+    speakPrompt:'Lisez à voix haute', speakHint:'Touchez le micro et prononcez la phrase',
+    recording:'Enregistrement...', stopRecording:'Arrêter', listeningNow:'Écoute...',
+    micUnsupported:"Votre navigateur ne prend pas en charge la reconnaissance vocale. Vous pouvez écrire votre réponse.",
+    micDenied:"Autorisation du micro refusée. Activez-la ou écrivez votre réponse.",
+    micNoDevice:"Aucun microphone trouvé. Écrivez votre réponse.",
+    micError:"Impossible d'utiliser le micro. Réessayez ou écrivez votre réponse.",
+    micNoSpeech:"Je n'ai pas bien entendu. Réessayez.",
+    typeInstead:'Écrire à la place', tryAgain:'Réessayer', pressToSpeak:'Touchez pour parler',
+    heard:"J'ai entendu", expected:'Réponse attendue', yourAnswer:'Votre réponse',
+    correct:'Correct !', incorrect:'Presque', checkAnswer:'Vérifier la réponse',
+    typeTranslation:'Écrivez la traduction', dictationPrompt:'Écoutez et écrivez exactement ce que vous entendez',
+    playAudio:"Lire l'audio", replayAudio:'Réécouter',
+    showHint:'Afficher un indice', hideHint:"Masquer l'indice", pronHint:'Prononciation',
+    romanAcceptedNote:'La romanisation est aussi acceptée.', enterToCheck:"Appuyez sur Entrée pour vérifier", answerRequired:"Écrivez d'abord une réponse",
     badges:{ first:{n:'Premiers pas',d:'Terminez 1 leçon'}, ten:{n:'Studieux',d:'Terminez 10 leçons'},
       half:{n:'À mi-chemin',d:'50% du cours'}, all:{n:'Polyglotte',d:'Terminez tout le cours'},
       streak3:{n:'En feu',d:'3 jours d\'affilée'}, streak7:{n:'Inarrêtable',d:'7 jours d\'affilée'}, xp500:{n:'Énergie',d:'Cumulez 500 XP'} }
@@ -248,7 +1171,7 @@ const DEFAULT_STATE = {
   xp: 0,
   streak: 0,
   lastActive: null,
-  completed: {},          // { "en:A1:v": true, "en:A1:q": true, ... }
+  completed: {},          // { "en:A1-1:v": true, "en:A1-1:q": true, ... }
   settings: { rate: 0.9 }
 };
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -260,12 +1183,35 @@ let setupDraft = { name:'', native:'es', target:'en' };
 function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} }
 function load(){
   try { const raw = localStorage.getItem(STORE_KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch(e){}
+  if (!state.completed || typeof state.completed !== 'object') state.completed = {};
+  if (!state.settings || typeof state.settings !== 'object') state.settings = { rate:0.9 };
+  if (migrateLegacyProgress()) save();
   if (state.profile && state.profile.native && UI[state.profile.native]){
-  uiLang = state.profile.native;
-  setupDraft.native = state.profile.native;
-  setupDraft.target = state.profile.target || 'en';
-  if (state.profile.name) setupDraft.name = state.profile.name;
+    uiLang = state.profile.native;
+    setupDraft.native = state.profile.native;
+    setupDraft.target = state.profile.target || 'en';
+    if (state.profile.name) setupDraft.name = state.profile.name;
+  }
 }
+
+/* Migra el progreso del curso antiguo (target:nivel:tipo) al nuevo
+   esquema por unidades (target:unidad:tipo). Se conserva el porcentaje:
+   una lección antigua completada cuenta en las tres unidades del nivel. */
+function migrateLegacyProgress(){
+  let changed = false;
+  const next = {};
+  Object.keys(state.completed).forEach(function(key){
+    const parts = key.split(':');
+    if (parts.length === 3 && LEVELS.indexOf(parts[1]) !== -1 && LESSON_KINDS.indexOf(parts[2]) !== -1){
+      const code = parts[0], level = parts[1], kind = parts[2];
+      unitsForLevel(level).forEach(function(unit){ next[code + ':' + unit.id + ':' + kind] = true; });
+      changed = true;
+    } else {
+      next[key] = true;
+    }
+  });
+  if (changed) state.completed = next;
+  return changed;
 }
 
 /* ============================================================
@@ -277,10 +1223,22 @@ function badgeText(id, field){ const pack = UI[uiLang] || UI.es; const b = pack.
 function targetLang(code){ return TARGET_LANGS.find(l => l.code === code) || TARGET_LANGS[0]; }
 function targetName(code){ const l = targetLang(code); return l.name[uiLang] || l.name.en; }
 function unitTitle(unit){ return unit.title[uiLang] || unit.title.en; }
+function unitById(id){ return UNITS.find(function(u){ return u.id === id; }) || UNITS[0]; }
+function unitsForLevel(level){ return UNITS.filter(function(u){ return u.level === level; }); }
+function unitNumber(unit){ return unitsForLevel(unit.level).indexOf(unit) + 1; }
 function levelName(level){ const m = LEVEL_META[level]; return m.name[uiLang] || m.name.en; }
 function romanFor(code, idx){ return ROMAN[code] ? ROMAN[code][idx] : null; }
 function curTarget(){ return (state.profile && state.profile.target) || 'en'; }
 function curNative(){ return (state.profile && state.profile.native) || 'es'; }
+function lessonMeta(kind){ return LESSON_META.find(function(m){ return m.kind === kind; }) || LESSON_META[0]; }
+function lessonKindLabel(kind){ return t(lessonMeta(kind).label); }
+function lessonKindIcon(kind){ return lessonMeta(kind).icon; }
+function lessonLength(){
+  if (!player) return 0;
+  if (player.kind === 'v') return player.cards.length;
+  if (player.kind === 'q') return player.questions.length;
+  return player.items ? player.items.length : 0;
+}
 
 /* ============================================================
    5. TEXT-TO-SPEECH (Web Speech API)
@@ -304,30 +1262,195 @@ function speak(text, langCode){
 if ('speechSynthesis' in window) { window.speechSynthesis.onvoiceschanged = function(){}; }
 
 /* ============================================================
+   5b. RECONOCIMIENTO DE VOZ (Web Speech API)
+   ============================================================ */
+let activeRecognizer = null;
+
+function stopActiveRecognition(){
+  const rec = activeRecognizer;
+  activeRecognizer = null;
+  if (rec){
+    try {
+      rec.onresult = null; rec.onerror = null; rec.onend = null;
+      rec.abort();
+    } catch(e){}
+  }
+  if (player) player.listening = false;
+}
+
+function startListening(){
+  if (!player || player.answered || player.done) return;
+  if (player.listening){ stopActiveRecognition(); render(); return; }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){
+    player.micFallback = true;
+    player.micError = 'micUnsupported';
+    render();
+    return;
+  }
+
+  stopActiveRecognition();
+  let rec;
+  try { rec = new SR(); } catch(e){ player.micFallback = true; player.micError = 'micUnsupported'; render(); return; }
+
+  activeRecognizer = rec;
+  rec.lang = targetLang(curTarget()).tts;
+  rec.interimResults = true;
+  rec.continuous = false;
+  rec.maxAlternatives = 5;
+
+  rec.onstart = function(){
+    if (activeRecognizer !== rec) return;
+    player.listening = true;
+    player.micError = null;
+    render();
+  };
+
+  rec.onresult = function(e){
+    if (activeRecognizer !== rec) return;
+    const finals = [];
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const res = e.results[i];
+      if (res.isFinal){
+        for (let j = 0; j < res.length; j++){
+          if (res[j] && res[j].transcript) finals.push(res[j].transcript);
+        }
+      } else if (res[0]){
+        interim += res[0].transcript;
+      }
+    }
+    const live = document.getElementById('liveTranscript');
+    if (live) live.textContent = interim || finals[0] || '';
+    if (finals.length){
+      player.transcript = finals[0];
+      player.listening = false;
+      try { rec.stop(); } catch(err){}
+      evaluateSpeaking(finals);
+    } else if (interim){
+      player.transcript = interim;
+    }
+  };
+
+  rec.onerror = function(ev){
+    if (activeRecognizer !== rec) return;
+    activeRecognizer = null;
+    player.listening = false;
+    const code = ev && ev.error;
+    player.micError = code === 'no-speech' ? 'micNoSpeech'
+      : (code === 'not-allowed' || code === 'service-not-allowed') ? 'micDenied'
+      : code === 'audio-capture' ? 'micNoDevice'
+      : 'micError';
+    render();
+  };
+
+  rec.onend = function(){
+    if (activeRecognizer === rec) activeRecognizer = null;
+    if (player && player.listening && !player.answered){
+      player.listening = false;
+      if (player.transcript) evaluateSpeaking([player.transcript]);
+      else render();
+    }
+  };
+
+  player.micError = null;
+  player.micFallback = false;
+  player.transcript = '';
+  player.listening = true;
+  render();
+
+  try { rec.start(); }
+  catch(err){
+    activeRecognizer = null;
+    player.listening = false;
+    player.micError = 'micError';
+    render();
+  }
+}
+
+function stopListening(){
+  const rec = activeRecognizer;
+  if (rec){ try { rec.stop(); } catch(e){} }
+  setTimeout(function(){
+    if (activeRecognizer === rec && player && player.listening && !player.answered){
+      player.listening = false;
+      if (player.transcript) evaluateSpeaking([player.transcript]);
+      else render();
+    }
+  }, 900);
+}
+
+function evaluateSpeaking(transcripts){
+  if (!player || player.answered || player.done) return;
+  const item = player.items[player.i];
+  const list = (transcripts || []).filter(function(x){ return x && String(x).trim(); });
+  if (!list.length){
+    player.listening = false;
+    player.micError = 'micNoSpeech';
+    render();
+    return;
+  }
+  let best = list[0], bestScore = -1;
+  list.forEach(function(tr){
+    const score = bestAnswerScore(tr, item.accepted);
+    if (score > bestScore){ bestScore = score; best = tr; }
+  });
+  const targetNorm = normalizeAnswer(item.target);
+  const threshold = targetNorm.length <= 4 ? 0.8 : SPEAK_THRESHOLD;
+  const ok = bestScore >= threshold;
+  player.listening = false;
+  player.transcript = String(best).trim();
+  player.userAnswer = player.transcript;
+  player.answered = true;
+  player.isCorrect = ok;
+  if (ok) player.correct++;
+  render();
+}
+
+/* ============================================================
    6. PROGRESO / GAMIFICACIÓN
    ============================================================ */
-function lessonKey(level, kind){ return curTarget() + ':' + level + ':' + kind; }
-function levelStats(level){
-  const u = UNITS.find(x => x.level === level);
+function lessonKey(unitId, kind){ return curTarget() + ':' + unitId + ':' + kind; }
+function unitStats(unitId){
   let done = 0;
-  ['v','q'].forEach(k => { if (state.completed[lessonKey(level, k)]) done++; });
-  return { total:2, done:done, pct: Math.round(done / 2 * 100) };
+  LESSON_KINDS.forEach(function(k){ if (state.completed[lessonKey(unitId, k)]) done++; });
+  const total = LESSON_KINDS.length;
+  return { total:total, done:done, pct: total ? Math.round(done / total * 100) : 0 };
+}
+function levelStats(level){
+  let done = 0, total = 0;
+  unitsForLevel(level).forEach(function(unit){
+    const s = unitStats(unit.id);
+    done += s.done; total += s.total;
+  });
+  return { total:total, done:done, pct: total ? Math.round(done / total * 100) : 0 };
 }
 function overallStats(){
-  let done = 0;
-  LEVELS.forEach(lv => { ['v','q'].forEach(k => { if (state.completed[lessonKey(lv, k)]) done++; }); });
-  const total = LEVELS.length * 2;
+  let done = 0, total = 0;
+  UNITS.forEach(function(unit){
+    const s = unitStats(unit.id);
+    done += s.done; total += s.total;
+  });
   return { done:done, total:total, pct: total ? Math.round(done / total * 100) : 0 };
 }
 function isLevelUnlocked(level){
   const i = LEVELS.indexOf(level);
   if (i === 0) return true;
-  return levelStats(LEVELS[i-1]).pct >= 50;
+  return levelStats(LEVELS[i-1]).pct >= UNLOCK_PCT;
+}
+function isUnitUnlocked(unit){
+  if (!isLevelUnlocked(unit.level)) return false;
+  const siblings = unitsForLevel(unit.level);
+  const i = siblings.indexOf(unit);
+  if (i <= 0) return true;
+  return unitStats(siblings[i-1].id).pct >= UNLOCK_PCT;
 }
 function findNextLesson(){
-  for (const lv of LEVELS){
-    for (const k of ['v','q']){
-      if (!state.completed[lessonKey(lv, k)]) return { level:lv, kind:k };
+  for (const unit of UNITS){
+    if (!isLevelUnlocked(unit.level) || !isUnitUnlocked(unit)) continue;
+    for (const k of LESSON_KINDS){
+      if (!state.completed[lessonKey(unit.id, k)]) return { unit:unit.id, level:unit.level, kind:k };
     }
   }
   return null;
@@ -371,8 +1494,8 @@ function pickOptions(correct, pool){
   for (let i = opts.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp; }
   return { options: opts, answer: opts.indexOf(correct) };
 }
-function buildQuestions(level){
-  const unit = UNITS.find(u => u.level === level);
+function buildQuestions(unitId){
+  const unit = unitById(unitId);
   const lang = curTarget();
   const nat = curNative();
   const tPool = conceptPoolTarget(lang);
@@ -392,8 +1515,8 @@ function buildQuestions(level){
   qs.push({ kind:'listen', sub:t('listenChoose'), prompt:'', audio:tPool[first], options:rl.options, answer:rl.answer });
   return qs;
 }
-function buildCards(level){
-  const unit = UNITS.find(u => u.level === level);
+function buildCards(unitId){
+  const unit = unitById(unitId);
   const lang = curTarget();
   const nat = curNative();
   const cards = [];
@@ -401,6 +1524,36 @@ function buildCards(level){
     cards.push({ idx:i, word:LEX[lang][i], gloss:GLOSS[nat][i], roman:romanFor(lang, i) });
   }
   return cards;
+}
+
+/* Genera los ejercicios de expresión oral, escritura y dictado */
+function buildItems(unitId, kind){
+  const unit = unitById(unitId);
+  const lang = curTarget();
+  const nat = curNative();
+  const tPool = conceptPoolTarget(lang);
+  const nPool = conceptPoolNative(nat);
+  const items = [];
+  for (let i = unit.start; i < unit.end; i++){
+    const roman = romanFor(lang, i);
+    if (kind === 's'){
+      items.push({
+        idx:i, target:tPool[i], prompt:nPool[i], roman:roman,
+        accepted: acceptedAnswers(lang, i, { roman:true, numbers:true })
+      });
+    } else if (kind === 'w'){
+      items.push({
+        idx:i, prompt:nPool[i], answer:tPool[i], roman:roman,
+        accepted: acceptedAnswers(lang, i, { sameGloss:true, roman:true, numbers:true })
+      });
+    } else {
+      items.push({
+        idx:i, audio:tPool[i], answer:tPool[i], roman:roman,
+        accepted: acceptedAnswers(lang, i, { roman:true, strict:true })
+      });
+    }
+  }
+  return items;
 }
 
 /* ============================================================
@@ -508,11 +1661,12 @@ function homeScreen(){
   let continueHtml;
   if (next){
     const meta = LEVEL_META[next.level];
-    const title = next.kind === 'v' ? (unitTitle(UNITS.find(u=>u.level===next.level)) + ' · ' + t('vocab')) : (unitTitle(UNITS.find(u=>u.level===next.level)) + ' · ' + t('practice'));
+    const nextUnit = unitById(next.unit);
+    const title = t('unit') + ' ' + unitNumber(nextUnit) + ' · ' + unitTitle(nextUnit) + ' · ' + lessonKindLabel(next.kind);
     continueHtml = ''
     + '<button data-action="resume" class="group w-full text-left">'
     +   '<div class="flex items-center gap-4 rounded-3xl border border-brand-500/30 bg-gradient-to-r from-brand-600/20 to-cyan-500/10 p-5 transition hover:border-brand-400/50">'
-    +     '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + (next.kind === 'v' ? 'fa-book' : 'fa-circle-question') + ' text-white"></i></span>'
+    +     '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + lessonKindIcon(next.kind) + ' text-white"></i></span>'
     +     '<span class="min-w-0 flex-1">'
     +       '<span class="block text-xs font-semibold uppercase tracking-wider text-brand-300">' + esc(t('resume')) + ' · ' + next.level + '</span>'
     +       '<span class="block truncate text-lg font-bold">' + esc(title) + '</span>'
@@ -575,24 +1729,40 @@ function homeScreen(){
 function pathScreen(){
   const lv = screen.level || 'A1';
   const meta = LEVEL_META[lv];
-  const unit = UNITS.find(u => u.level === lv);
   const s = levelStats(lv);
+  const units = unitsForLevel(lv);
 
-  const lessons = [
-    { kind:'v', type:t('vocab'), icon:'fa-book' },
-    { kind:'q', type:t('practice'), icon:'fa-circle-question' }
-  ];
-  const rows = lessons.map(function(l){
-    const done = !!state.completed[lessonKey(lv, l.kind)];
+  const unitCards = units.map(function(unit, index){
+    const us = unitStats(unit.id);
+    const unlocked = isUnitUnlocked(unit);
+    const rows = LESSON_META.map(function(l){
+      const done = !!state.completed[lessonKey(unit.id, l.kind)];
+      return ''
+      + '<button data-action="start-lesson" data-unit="' + unit.id + '" data-kind="' + l.kind + '" '
+      +   'class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/5">'
+      +   '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg ' + (done ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-300') + '">'
+      +     '<i class="fa-solid ' + (done ? 'fa-check' : l.icon) + ' text-sm"></i></span>'
+      +   '<span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold ' + (done ? 'text-slate-400' : '') + '">' + esc(t(l.label)) + '</span>'
+      +     '<span class="text-xs text-slate-500">' + esc(t(l.desc)) + '</span></span>'
+      +   '<i class="fa-solid ' + (done ? 'fa-circle-check text-emerald-400' : 'fa-chevron-right text-slate-500') + '"></i>'
+      + '</button>';
+    }).join('');
+
     return ''
-    + '<button data-action="start-lesson" data-kind="' + l.kind + '" '
-    +   'class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/5">'
-    +   '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg ' + (done ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-300') + '">'
-    +     '<i class="fa-solid ' + (done ? 'fa-check' : l.icon) + ' text-sm"></i></span>'
-    +   '<span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold ' + (done ? 'text-slate-400' : '') + '">' + esc(l.type) + '</span>'
-    +     '<span class="text-xs text-slate-500">' + (l.kind === 'v' ? t('vocab') : t('practice')) + '</span></span>'
-    +   '<i class="fa-solid ' + (done ? 'fa-circle-check text-emerald-400' : 'fa-chevron-right text-slate-500') + '"></i>'
-    + '</button>';
+    + '<div class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">'
+    +   '<div class="p-4">'
+    +     '<div class="flex items-center gap-3">'
+    +       '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ' + (unlocked ? meta.grad : 'from-slate-600 to-slate-700') + '"><i class="fa-solid ' + (unlocked ? unit.icon : 'fa-lock') + ' text-white"></i></span>'
+    +       '<div class="min-w-0 flex-1"><p class="font-bold">' + esc(t('unit')) + ' ' + (index + 1) + ' · ' + esc(unitTitle(unit)) + '</p>'
+    +         '<p class="text-xs text-slate-400">' + us.done + '/' + us.total + ' ' + esc(t('lessonWord')) + (unlocked ? '' : ' · ' + esc(t('locked'))) + '</p></div>'
+    +       '<span class="text-sm font-extrabold ' + (unlocked ? meta.text : 'text-slate-500') + '">' + us.pct + '%</span>'
+    +     '</div>'
+    +     '<div class="mt-3">' + progressBar(us.pct, unlocked ? meta.grad : 'from-slate-600 to-slate-700') + '</div>'
+    +   '</div>'
+    +   (unlocked
+        ? '<div class="space-y-1 border-t border-white/5 px-2 pb-2 pt-1">' + rows + '</div>'
+        : '<div class="border-t border-white/5 px-4 py-4 text-sm text-slate-400"><i class="fa-solid fa-lock mr-2 text-slate-500"></i>' + esc(t('unitLocked')) + '</div>')
+    + '</div>';
   }).join('');
 
   return ''
@@ -606,13 +1776,7 @@ function pathScreen(){
   +     '<span class="text-2xl font-extrabold ' + meta.text + '">' + s.pct + '%</span>'
   +   '</div>'
   +   '<div class="mt-3">' + progressBar(s.pct, meta.grad) + '</div>'
-  +   '<div class="mt-6 rounded-2xl border border-white/10 bg-slate-900/60 p-2">'
-  +     '<div class="flex items-center gap-3 p-3">'
-  +       '<span class="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ' + meta.grad + '"><i class="fa-solid ' + unit.icon + ' text-white"></i></span>'
-  +       '<div><p class="font-bold">' + esc(unitTitle(unit)) + '</p><p class="text-xs text-slate-400">' + esc(t('unit')) + ' 1 · 2 ' + esc(t('lessonWord')) + '</p></div>'
-  +     '</div>'
-  +     '<div class="space-y-1 px-1 pb-1">' + rows + '</div>'
-  +   '</div>'
+  +   unitCards
   + '</section>';
 }
 
@@ -620,7 +1784,10 @@ function currentLessonMeta(){ return { level:player.level, kind:player.kind }; }
 
 function lessonScreen(){
   if (player.done) return resultView();
-  return player.kind === 'v' ? vocabView() : quizView();
+  if (player.kind === 'v') return vocabView();
+  if (player.kind === 'q') return quizView();
+  if (player.kind === 's') return speakingView();
+  return typingView();
 }
 
 function lessonHeader(pct){
@@ -628,7 +1795,7 @@ function lessonHeader(pct){
   + '<div class="mb-5 flex items-center gap-3">'
   +   '<button data-action="exit-lesson" class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-slate-900/60 text-slate-300 transition hover:text-white"><i class="fa-solid fa-xmark"></i></button>'
   +   '<div class="flex-1">' + progressBar(pct) + '</div>'
-  +   '<span class="text-xs font-semibold text-slate-400">' + player.level + '</span>'
+  +   '<span class="text-xs font-semibold text-slate-400">' + player.level + ' · U' + unitNumber(unitById(player.unit)) + '</span>'
   + '</div>';
 }
 
@@ -636,7 +1803,7 @@ function vocabView(){
   const card = player.cards[player.i];
   const total = player.cards.length;
   const pct = Math.round(player.i / total * 100);
-  const unit = UNITS.find(u => u.level === player.level);
+  const unit = unitById(player.unit);
   const isCJK = !!targetLang(curTarget()).roman;
   return ''
   + '<section class="animate-fadeUp">'
@@ -719,17 +1886,201 @@ function quizView(){
   + '</section>';
 }
 
+function nextButtonLabel(){
+  return player.i === lessonLength() - 1 ? t('seeResult') : t('nextQuestion');
+}
+
+function feedbackBox(ok, opts){
+  opts = opts || {};
+  const tone = ok
+    ? 'border-emerald-500/40 bg-emerald-500/10'
+    : 'border-rose-500/40 bg-rose-500/10';
+  const icon = ok ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-400';
+  const title = ok ? 'text-emerald-200' : 'text-rose-200';
+  let lines = '';
+  if (opts.heard) lines += '<p class="mt-1 text-sm text-slate-300">' + esc(t('heard')) + ': <span class="font-semibold">' + esc(opts.heard) + '</span></p>';
+  if (opts.your) lines += '<p class="mt-1 text-sm text-slate-300">' + esc(t('yourAnswer')) + ': <span class="font-semibold">' + esc(opts.your) + '</span></p>';
+  if (!ok && opts.expected) lines += '<p class="mt-1 text-sm text-slate-300">' + esc(t('expected')) + ': <span class="font-semibold text-white">' + esc(opts.expected) + '</span></p>';
+  if (!ok && opts.roman) lines += '<p class="mt-0.5 text-xs text-slate-400">[' + esc(opts.roman) + ']</p>';
+  return ''
+  + '<div class="mt-5 rounded-2xl border p-4 text-left animate-pop ' + tone + '" role="status" aria-live="polite">'
+  +   '<div class="flex items-start gap-3">'
+  +     '<i class="fa-solid ' + icon + ' mt-0.5 text-xl"></i>'
+  +     '<div class="min-w-0 flex-1"><p class="font-bold ' + title + '">' + esc(ok ? t('correct') : t('incorrect')) + '</p>' + lines + '</div>'
+  +   '</div>'
+  + '</div>';
+}
+
+function speakingView(){
+  const item = player.items[player.i];
+  const total = player.items.length;
+  const pct = Math.round(player.i / total * 100);
+  const isCJK = !!targetLang(curTarget()).roman;
+  const supported = speechRecognitionSupported();
+  const showInput = !supported || player.micFallback;
+
+  let micBlock = '';
+  if (player.listening){
+    let bars = '';
+    for (let b = 0; b < 5; b++) bars += '<span class="wave-bar"></span>';
+    micBlock = ''
+    + '<div class="text-center">'
+    +   '<button data-action="stop-listening" class="mic-live mx-auto grid h-24 w-24 place-items-center rounded-full border border-rose-400/50 bg-rose-500/15 text-rose-300 transition hover:bg-rose-500/25" aria-label="' + esc(t('stopRecording')) + '">'
+    +     '<i class="fa-solid fa-stop text-2xl"></i></button>'
+    +   '<div class="mt-4 flex h-6 items-center justify-center gap-1 text-rose-300">' + bars + '</div>'
+    +   '<p class="mt-2 text-sm font-semibold text-rose-300">' + esc(t('recording')) + '</p>'
+    +   '<p id="liveTranscript" class="mt-2 min-h-[1.5rem] px-2 text-sm text-slate-300">' + esc(player.transcript || '') + '</p>'
+    +   '<p class="mt-1 text-xs text-slate-500">' + esc(t('stopRecording')) + '</p>'
+    + '</div>';
+  } else if (!player.answered){
+    micBlock = ''
+    + '<div class="text-center">'
+    +   '<button data-action="start-listening" ' + (supported ? '' : 'disabled') + ' class="mx-auto grid h-24 w-24 place-items-center rounded-full border transition '
+    +     (supported ? 'border-brand-500/40 bg-brand-500/10 text-brand-300 pulse-ring hover:bg-brand-500/20' : 'border-white/10 bg-white/5 text-slate-600') + '" aria-label="' + esc(t('pressToSpeak')) + '">'
+    +     '<i class="fa-solid fa-microphone text-3xl"></i></button>'
+    +   '<p class="mt-3 px-2 text-sm ' + (supported ? 'text-slate-400' : 'text-amber-200') + '">' + esc(supported ? t('speakHint') : t('micUnsupported')) + '</p>'
+    +   (supported && !showInput ? '<button data-action="use-typing" class="mt-2 text-xs font-semibold text-brand-300 transition hover:text-brand-200"><i class="fa-solid fa-keyboard mr-1"></i>' + esc(t('typeInstead')) + '</button>' : '')
+    +   (player.micError ? '<p class="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">' + esc(t(player.micError)) + '</p>' : '')
+    + '</div>';
+  }
+
+  const inputBlock = (showInput && !player.answered)
+    ? '<div class="mt-5">'
+      + '<input id="answerInput" data-input="answer" type="text" value="' + esc(player.inputDraft || '') + '" autocomplete="off" autocapitalize="none" spellcheck="false" '
+      +   'placeholder="' + esc(t('typeInstead')) + '" class="' + (isCJK ? 'cjk ' : '') + 'w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-center text-lg font-semibold text-slate-100 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">'
+      + '<button data-action="check-answer" class="mt-3 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+      +   esc(t('checkAnswer')) + ' <i class="fa-solid fa-circle-check ml-1"></i></button>'
+      + '</div>'
+    : '';
+
+  const feedback = player.answered
+    ? feedbackBox(player.isCorrect, (showInput || !supported)
+        ? { your: player.userAnswer, expected: item.target, roman: item.roman }
+        : { heard: player.transcript, expected: item.target, roman: item.roman })
+    : '';
+  const retryBtn = (player.answered && !player.isCorrect)
+    ? '<button data-action="retry-speaking" class="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-900"><i class="fa-solid fa-rotate-right"></i> ' + esc(t('tryAgain')) + '</button>'
+    : '';
+
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   lessonHeader(pct)
+  +   '<p class="mb-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('speaking')) + ' · ' + (player.i + 1) + ' ' + esc(t('of')) + ' ' + total + '</p>'
+  +   '<div class="mb-5 flex items-center justify-center gap-2"><i class="fa-solid fa-microphone text-brand-400"></i><span class="text-sm font-semibold text-slate-300">' + player.correct + ' ' + esc(t('hits')) + '</span></div>'
+  +   '<div class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl">'
+  +     '<div class="text-center">'
+  +       '<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('speakPrompt')) + '</p>'
+  +       '<p class="mt-2 ' + (isCJK ? 'cjk ' : '') + 'text-3xl font-extrabold leading-snug sm:text-4xl">' + esc(item.target) + '</p>'
+  +       (item.roman ? '<p class="mt-1 text-sm text-slate-400">[' + esc(item.roman) + ']</p>' : '')
+  +       '<p class="mt-3 text-sm text-slate-500">' + esc(item.prompt) + '</p>'
+  +       '<button data-action="speak" data-text="' + esc(item.target) + '" class="mt-3 inline-flex items-center gap-2 rounded-full border border-brand-500/40 bg-brand-500/10 px-4 py-2 text-sm font-semibold text-brand-300 transition hover:bg-brand-500/20"><i class="fa-solid fa-volume-high"></i> ' + esc(t('listen')) + '</button>'
+  +     '</div>'
+  +     '<div class="mt-6 border-t border-white/10 pt-6">' + micBlock + inputBlock + feedback + retryBtn + '</div>'
+  +   '</div>'
+  +   (player.answered
+      ? '<button data-action="next" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+        + esc(nextButtonLabel()) + ' <i class="fa-solid fa-arrow-right ml-1"></i></button>'
+      : '')
+  + '</section>';
+}
+
+function typingView(){
+  const isDict = player.kind === 'd';
+  const item = player.items[player.i];
+  const total = player.items.length;
+  const pct = Math.round(player.i / total * 100);
+  const isCJK = !!targetLang(curTarget()).roman;
+  const showHint = !!player.hintOpen && !!item.roman;
+
+  let promptBlock = '';
+  if (isDict){
+    promptBlock = ''
+    + '<div class="text-center">'
+    +   '<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('dictationPrompt')) + '</p>'
+    +   '<button data-action="speak" data-text="' + esc(item.audio) + '" class="mx-auto mt-4 grid h-20 w-20 place-items-center rounded-full border border-brand-500/40 bg-brand-500/10 text-brand-300 transition hover:bg-brand-500/20 pulse-ring" aria-label="' + esc(t('playAudio')) + '">'
+    +     '<i class="fa-solid fa-volume-high text-3xl"></i></button>'
+    +   '<button data-action="speak" data-text="' + esc(item.audio) + '" class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white"><i class="fa-solid fa-rotate-right"></i> ' + esc(t('replayAudio')) + '</button>'
+    + '</div>';
+  } else {
+    promptBlock = ''
+    + '<div class="text-center">'
+    +   '<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(t('howSay')) + '</p>'
+    +   '<p class="mt-2 text-2xl font-extrabold leading-snug">' + esc(item.prompt) + '</p>'
+    +   '<p class="mt-1 text-xs text-slate-500">' + esc(t('typeTranslation')) + '</p>'
+    + '</div>';
+  }
+
+  const inputBorder = player.answered
+    ? (player.isCorrect ? 'border-emerald-500/50 focus:border-emerald-500' : 'border-rose-500/50 focus:border-rose-500')
+    : 'border-white/10 focus:border-brand-500';
+  const inputBlock = ''
+  + '<input id="answerInput" data-input="answer" type="text" value="' + esc(player.inputDraft || '') + '" ' + (player.answered ? 'disabled ' : '') + 'autocomplete="off" autocapitalize="none" spellcheck="false" '
+  +   'placeholder="' + esc(isDict ? t('dictationPrompt') : t('typeTranslation')) + '" class="mt-5 w-full rounded-xl border bg-slate-950/60 px-4 py-3.5 text-center text-lg font-semibold text-slate-100 outline-none transition focus:ring-2 focus:ring-brand-500/30 ' + (isCJK ? 'cjk ' : '') + inputBorder + '">';
+
+  let hintBlock = '';
+  if (item.roman){
+    hintBlock = ''
+    + '<div class="mt-3 text-center">'
+    +   '<button data-action="toggle-hint" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 transition hover:text-brand-300"><i class="fa-solid fa-lightbulb"></i> ' + esc(showHint ? t('hideHint') : t('showHint')) + '</button>'
+    +   (showHint
+        ? '<div class="mt-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300"><span class="text-xs uppercase tracking-wide text-slate-500">' + esc(t('pronHint')) + '</span><br>[' + esc(item.roman) + ']</div>'
+        : '')
+    + '</div>';
+  }
+
+  const feedback = player.answered
+    ? feedbackBox(player.isCorrect, { your: player.userAnswer, expected: item.answer, roman: item.roman })
+    : '';
+
+  return ''
+  + '<section class="animate-fadeUp">'
+  +   lessonHeader(pct)
+  +   '<p class="mb-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">' + esc(isDict ? t('dictation') : t('writing')) + ' · ' + (player.i + 1) + ' ' + esc(t('of')) + ' ' + total + '</p>'
+  +   '<div class="mb-5 flex items-center justify-center gap-2"><i class="fa-solid ' + (isDict ? 'fa-headphones' : 'fa-pen-nib') + ' text-brand-400"></i><span class="text-sm font-semibold text-slate-300">' + player.correct + ' ' + esc(t('hits')) + '</span></div>'
+  +   '<div class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl">'
+  +     promptBlock
+  +     (isCJK ? '<p class="mt-2 text-center text-xs text-slate-500">' + esc(t('romanAcceptedNote')) + '</p>' : '')
+  +     inputBlock
+  +     hintBlock
+  +     feedback
+  +   '</div>'
+  +   (player.answered
+      ? '<button data-action="next" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+        + esc(nextButtonLabel()) + ' <i class="fa-solid fa-arrow-right ml-1"></i></button>'
+      : '<button data-action="check-answer" class="mt-6 w-full rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 px-4 py-3.5 font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:brightness-110 active:scale-[.99]">'
+        + esc(t('checkAnswer')) + ' <i class="fa-solid fa-circle-check ml-1"></i></button>'
+        + '<p class="mt-3 text-center text-xs text-slate-500">' + esc(t('enterToCheck')) + '</p>')
+  + '</section>';
+}
+
+function checkTypedAnswer(){
+  if (!player || player.answered || player.done) return;
+  if (player.kind !== 'w' && player.kind !== 'd' && player.kind !== 's') return;
+  const input = document.getElementById('answerInput');
+  const value = String(input ? input.value : (player.inputDraft || '')).trim();
+  if (!value){ toast(t('answerRequired'), 'fa-keyboard'); return; }
+  const item = player.items[player.i];
+  const mode = player.kind === 'd' ? 'dictation' : 'writing';
+  const ok = answerMatches(value, item.accepted, mode);
+  player.inputDraft = value;
+  player.userAnswer = value;
+  player.answered = true;
+  player.isCorrect = ok;
+  if (ok) player.correct++;
+  render();
+}
+
 function resultView(){
-  const isQuiz = player.kind === 'q';
-  const total = isQuiz ? player.questions.length : player.cards.length;
+  const isQuiz = player.kind !== 'v';
+  const total = lessonLength();
   const perfect = isQuiz && player.correct === total;
-  const unit = UNITS.find(u => u.level === player.level);
+  const unit = unitById(player.unit);
   return ''
   + '<section class="animate-pop text-center">'
   +   '<div class="mx-auto mt-6 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-cyan-500 shadow-2xl shadow-brand-900/50">'
   +     '<i class="fa-solid fa-' + (perfect ? 'star' : 'flag-checkered') + ' text-4xl text-white"></i></div>'
   +   '<h2 class="mt-5 text-2xl font-extrabold">' + esc(t('completeTitle')) + '</h2>'
-  +   '<p class="text-slate-400">' + esc(unitTitle(unit)) + ' · ' + (isQuiz ? esc(t('practice')) : esc(t('vocab'))) + '</p>'
+  +   '<p class="text-slate-400">' + esc(t('unit')) + ' ' + unitNumber(unit) + ' · ' + esc(unitTitle(unit)) + ' · ' + esc(lessonKindLabel(player.kind)) + '</p>'
   +   (isQuiz ? '<p class="mt-1 text-sm text-slate-400">' + esc(t('hits')) + ': <span class="font-bold text-slate-200">' + player.correct + '/' + total + '</span></p>' : '')
   +   '<div class="mx-auto mt-6 flex max-w-xs items-center justify-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-6 py-4">'
   +     '<i class="fa-solid fa-bolt text-2xl text-brand-400"></i>'
@@ -791,35 +2142,57 @@ function profileScreen(){
    ============================================================ */
 function render(){
   const app = document.getElementById('app');
-  if (!state.profile){ app.innerHTML = setupScreen(); return; }
+  if (!state.profile){ stopActiveRecognition(); app.innerHTML = setupScreen(); return; }
+  const isLesson = screen.name === 'lesson';
+  const isSpeaking = isLesson && player && player.kind === 's';
+  if (!isSpeaking) stopActiveRecognition();
+  if (!isLesson){ try { window.speechSynthesis.cancel(); } catch(e){} }
+
   let content;
   if (screen.name === 'path') content = pathScreen();
   else if (screen.name === 'profile') content = profileScreen();
   else if (screen.name === 'lesson') content = lessonScreen();
   else content = homeScreen();
-  const isLesson = screen.name === 'lesson';
   app.innerHTML = header() + '<main class="mx-auto max-w-4xl px-4 pt-6 ' + (isLesson ? 'pb-10' : 'pb-28') + '">' + content + '</main>' + (isLesson ? '' : bottomNav());
+
+  if (isLesson && player && !player.done && player.kind === 'd' && !player.answered && !player.autoPlayed){
+    player.autoPlayed = true;
+    const text = player.items[player.i].audio;
+    setTimeout(function(){
+      if (screen.name === 'lesson' && player && player.kind === 'd' && !player.answered) speak(text);
+    }, 350);
+  }
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 
 /* ============================================================
    11. ACCIONES
    ============================================================ */
-function startLesson(level, kind){
+function startLesson(unitId, kind){
+  if (LESSON_KINDS.indexOf(kind) === -1) kind = 'v';
+  const unit = unitById(unitId);
+  if (!isUnitUnlocked(unit)){ toast(t('unitLocked'), 'fa-lock'); return; }
+  stopActiveRecognition();
+  try { window.speechSynthesis.cancel(); } catch(e){}
   player = {
-    level: level, kind: kind, i: 0, revealed: false, answered: false,
+    unit: unit.id, level: unit.level, kind: kind, i: 0, revealed: false, answered: false,
     chosen: null, correct: 0, xpEarned: 0, done: false,
-    cards: kind === 'v' ? buildCards(level) : null,
-    questions: kind === 'q' ? buildQuestions(level) : null
+    cards: kind === 'v' ? buildCards(unit.id) : null,
+    questions: kind === 'q' ? buildQuestions(unit.id) : null,
+    items: (kind === 's' || kind === 'w' || kind === 'd') ? buildItems(unit.id, kind) : null,
+    inputDraft: '', userAnswer: '', transcript: '', isCorrect: null,
+    micError: null, listening: false, micFallback: false, hintOpen: false, autoPlayed: false
   };
   screen = { name:'lesson' };
   render();
 }
 function finishLesson(){
-  const key = lessonKey(player.level, player.kind);
+  stopActiveRecognition();
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  const key = lessonKey(player.unit, player.kind);
   const firstTime = !state.completed[key];
   let xp;
-  if (player.kind === 'q') xp = 10 + player.correct * 4; else xp = 15;
+  if (player.kind === 'v') xp = 15; else xp = 10 + player.correct * 4;
   if (firstTime){
     player.xpEarned = xp;
     state.completed[key] = true;
@@ -835,11 +2208,21 @@ function finishLesson(){
   toast('+' + player.xpEarned + ' XP · ' + t(firstTime ? 'wellDone' : 'review'), 'fa-bolt');
 }
 function advance(){
+  if (player.listening) stopActiveRecognition();
   player.i++;
   player.revealed = false;
   player.answered = false;
   player.chosen = null;
-  const len = player.kind === 'v' ? player.cards.length : player.questions.length;
+  player.inputDraft = '';
+  player.userAnswer = '';
+  player.transcript = '';
+  player.isCorrect = null;
+  player.micError = null;
+  player.listening = false;
+  player.micFallback = false;
+  player.hintOpen = false;
+  player.autoPlayed = false;
+  const len = lessonLength();
   if (player.i >= len) finishLesson();
   else render();
 }
@@ -865,10 +2248,32 @@ document.addEventListener('click', function(e){
   else if (a === 'nav-path'){ const n = findNextLesson(); screen = { name:'path', level: n ? n.level : 'A1' }; render(); }
   else if (a === 'open-level'){ screen = { name:'path', level: el.dataset.level }; render(); }
   else if (a === 'locked'){ toast(t('pathLocked'), 'fa-lock'); }
-  else if (a === 'resume'){ const n = findNextLesson(); if (n) startLesson(n.level, n.kind); }
-  else if (a === 'start-lesson'){ startLesson(screen.level || 'A1', el.dataset.kind); }
+  else if (a === 'resume'){ const n = findNextLesson(); if (n) startLesson(n.unit, n.kind); }
+  else if (a === 'start-lesson'){ startLesson(el.dataset.unit, el.dataset.kind); }
   else if (a === 'exit-lesson'){ screen = { name:'path', level: player.level }; render(); }
   else if (a === 'speak'){ speak(el.dataset.text, targetLang(curTarget()).tts); }
+  else if (a === 'start-listening'){ startListening(); }
+  else if (a === 'stop-listening'){ stopListening(); }
+  else if (a === 'use-typing'){
+    stopActiveRecognition();
+    player.micFallback = true;
+    player.listening = false;
+    player.micError = null;
+    render();
+    const input = document.getElementById('answerInput');
+    if (input) setTimeout(function(){ try { input.focus(); } catch(err){} }, 60);
+  }
+  else if (a === 'check-answer'){ checkTypedAnswer(); }
+  else if (a === 'retry-speaking'){
+    player.answered = false;
+    player.isCorrect = null;
+    player.transcript = '';
+    player.userAnswer = '';
+    player.inputDraft = '';
+    player.micError = null;
+    render();
+  }
+  else if (a === 'toggle-hint'){ player.hintOpen = !player.hintOpen; render(); }
   else if (a === 'reveal'){ player.revealed = true; render(); }
   else if (a === 'answer'){
     if (player.answered) return;
@@ -879,7 +2284,7 @@ document.addEventListener('click', function(e){
     render();
   }
   else if (a === 'next'){ advance(); }
-  else if (a === 'retry'){ startLesson(player.level, player.kind); }
+  else if (a === 'retry'){ startLesson(player.unit, player.kind); }
   else if (a === 'back-path'){ screen = { name:'path', level: player.level }; render(); }
   else if (a === 'toggle-speed'){ state.settings.rate = state.settings.rate >= 1 ? 0.8 : 1.1; save(); render(); }
   else if (a === 'reset'){
@@ -892,6 +2297,24 @@ document.addEventListener('click', function(e){
       render();
       toast(t('resetProgress'), 'fa-trash-can');
     }
+  }
+});
+
+document.addEventListener('input', function(e){
+  if (player && e.target && e.target.matches && e.target.matches('[data-input="answer"]')){
+    player.inputDraft = e.target.value;
+  }
+});
+
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Enter' || e.isComposing) return;
+  if (screen.name !== 'lesson' || !player || player.done) return;
+  const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'button' || tag === 'a') return;
+  if (player.answered){ e.preventDefault(); advance(); return; }
+  if (player.kind === 'w' || player.kind === 'd' || (player.kind === 's' && document.getElementById('answerInput'))){
+    e.preventDefault();
+    checkTypedAnswer();
   }
 });
 
